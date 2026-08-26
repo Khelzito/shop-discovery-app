@@ -1,33 +1,43 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Icon } from '@/components/ui/icon';
+import { colors, layout, typography } from '@/theme';
 
+/**
+ * V1 ends with exactly four tabs (Accueil, Explorer, Favoris, Profil).
+ * Favoris and Profil arrive with the navigation skeleton in a later phase.
+ */
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarActiveTintColor: colors.tabActive,
+        tabBarInactiveTintColor: colors.tabInactive,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: layout.hairline,
+        },
+        tabBarLabelStyle: {
+          fontSize: typography.caption.fontSize,
+          fontWeight: typography.label.fontWeight,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Accueil',
+          tabBarIcon: ({ color }) => <Icon name="home" size="lg" color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Explorer',
+          tabBarIcon: ({ color }) => <Icon name="explore" size="lg" color={color} />,
         }}
       />
     </Tabs>

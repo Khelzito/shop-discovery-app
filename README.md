@@ -1,50 +1,53 @@
-# Welcome to your Expo app 👋
+# Shop Discovery App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile discovery platform for finding independent online shops. Purchases stay on the merchant website.
 
-## Get started
+See `/docs` for product spec, design system, database, AI architecture, and the development plan. Start with `docs/MASTER_SPEC.md`.
 
-1. Install dependencies
+## Requirements
 
-   ```bash
-   npm install
-   ```
+- Node.js 20.19.x or later
+- Expo CLI via the project (`npx expo`)
+- Expo Go or an Android emulator on Windows; iOS Simulator requires a Mac
 
-2. Start the app
+## Setup
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+npm install
+cp .env.example .env
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Fill `.env` with public Supabase values when they exist. Only `EXPO_PUBLIC_` variables are available in the client. Never put a service-role key, LLM secret, or other privileged credential in the app or in `EXPO_PUBLIC_` variables.
 
-## Learn more
+`.env` is gitignored. `.env.example` is tracked.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Scripts
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| Command | Purpose |
+|---|---|
+| `npm start` | Start the Expo dev server |
+| `npm run android` | Open on Android |
+| `npm run ios` | Open on iOS (macOS only) |
+| `npm run web` | Open in a browser |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript (`tsc --noEmit`) |
 
-## Join the community
+## Design system
 
-Join our community of developers creating universal apps.
+Design tokens live in `theme/` and are the single source of truth for colors,
+typography, spacing, radii and layout. Import them from `@/theme`. Never write a
+raw hex value, font size, spacing number or radius in a screen.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Reusable primitives live in `components/ui/` and are re-exported from
+`@/components/ui`: `Text`, `Screen`, `Icon`, `Button`, `SearchField`,
+`ImageFrame`, `Skeleton`, `Section`, `VerifiedMark`, `EmptyState`. Check that
+list before creating a new component.
+
+V1 constraints: light mode only, French-only copy, Feather icons (routed through
+`components/ui/icon.tsx`), and the platform system font. No accent color is
+defined until branding is settled.
+
+This repository is currently at Phase 01: design tokens and UI primitives. The
+Explore tab temporarily renders a live preview of the design system and is
+replaced by the real Explore screen in a later phase.
