@@ -58,6 +58,10 @@ export const colors = {
 
   /** Overlay above imagery. */
   scrim: 'rgba(17, 17, 17, 0.32)',
+  /** Resting background for a control floating over a photograph. */
+  overlayChip: 'rgba(255, 255, 255, 0.92)',
+  /** Same control while pressed. */
+  overlayChipPressed: 'rgba(255, 255, 255, 0.75)',
 } as const;
 
 export type ColorToken = keyof typeof colors;

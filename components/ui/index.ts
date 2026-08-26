@@ -4,6 +4,7 @@
  */
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './button';
 export { EmptyState, type EmptyStateProps } from './empty-state';
+export { FavoriteButton, type FavoriteButtonProps } from './favorite-button';
 export { Icon, type IconName, type IconProps } from './icon';
 export { getInitials, ImageFrame, type ImageFrameProps, type ImageFrameRatio } from './image-frame';
 export { Screen, type ScreenProps } from './screen';

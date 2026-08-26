@@ -48,6 +48,8 @@ export const layout = {
     portrait: 4 / 5,
     /** Horizontal editorial visual. */
     landscape: 3 / 2,
+    /** Large featured visual, e.g. a hidden gem on Home. */
+    feature: 4 / 3,
     /** Small selection tile. */
     square: 1,
   },

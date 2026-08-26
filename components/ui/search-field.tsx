@@ -23,6 +23,11 @@ export type SearchFieldProps = Omit<TextInputProps, 'style' | 'value' | 'onChang
    * where tapping the field opens the real search screen.
    */
   readOnlyPress?: () => void;
+  /**
+   * `lg` is the signature size used where search is the primary action.
+   * `md` is the compact size used when search sits above other content.
+   */
+  size?: 'md' | 'lg';
   style?: StyleProp<ViewStyle>;
 };
 
@@ -36,14 +41,17 @@ export function SearchField({
   onClear,
   placeholder = "Qu'est-ce que tu cherches ?",
   readOnlyPress,
+  size = 'lg',
   style,
   ...rest
 }: SearchFieldProps) {
   const [focused, setFocused] = useState(false);
   const showClear = value.length > 0 && !readOnlyPress;
 
+  const height = size === 'lg' ? layout.searchFieldHeight : layout.controlHeight.md;
+
   const field = (
-    <View style={[styles.container, focused && styles.containerFocused, style]}>
+    <View style={[styles.container, { height }, focused && styles.containerFocused, style]}>
       <Icon name="search" size="md" color={colors.iconMuted} />
       <TextInput
         value={value}
@@ -95,7 +103,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    height: layout.searchFieldHeight,
     paddingHorizontal: spacing.md,
     borderRadius: radii.lg,
     backgroundColor: colors.surfaceSecondary,

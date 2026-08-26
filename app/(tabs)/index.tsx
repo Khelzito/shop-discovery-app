@@ -1,75 +1,102 @@
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { Screen, SearchField, Section, ShopCardSkeleton, Text } from '@/components/ui';
+import { featuredCardWidth, standardCardWidth } from '@/components/shop/shop-card';
+import { ShopRail } from '@/components/shop/shop-rail';
+import { Screen, SearchField, Section } from '@/components/ui';
+import { FOR_YOU_SHOPS, HIDDEN_GEM_SHOPS, NEW_SHOPS } from '@/data/mock-shops';
 import { layout, spacing } from '@/theme';
 
+const COMPACT_CARD_WIDTH = 140;
+
 /**
- * Home shell — structure only.
+ * Home — the discovery entry point.
  *
- * The three discovery sections (Pour toi, Pépites cachées, Nouveautés) render
- * their loading state until real shop data arrives in a later phase.
+ * Three sections only: Pour toi, Pépites cachées, Nouveautés. No greeting, no
+ * categories, no promotion, no explanation of why a shop is recommended
+ * (docs/MASTER_SPEC.md §7). Content starts immediately under the search field
+ * and photography carries the screen.
  */
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
+  const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
+
+  const toggleFavorite = useCallback((shopId: string) => {
+    setFavorites((current) => {
+      const next = new Set(current);
+      if (next.has(shopId)) {
+        next.delete(shopId);
+      } else {
+        next.add(shopId);
+      }
+      return next;
+    });
+  }, []);
+
+  const cardWidths = useMemo(
+    () => ({
+      standard: standardCardWidth(width, spacing.sm),
+      featured: featuredCardWidth(width),
+    }),
+    [width]
+  );
+
+  const openSearch = () => router.push('/explore');
+
   return (
     <Screen scroll>
-      <View style={styles.header}>
-        <Text variant="title">Shop Discovery</Text>
-        <Text variant="meta" tone="secondary">
-          Des boutiques qui méritent d’être connues.
-        </Text>
-      </View>
-
-      <SearchField value="" onChangeText={() => {}} readOnlyPress={() => router.push('/explore')} />
+      <SearchField
+        value=""
+        onChangeText={() => {}}
+        size="md"
+        placeholder="Rechercher une boutique, un produit..."
+        readOnlyPress={openSearch}
+      />
 
       <View style={styles.sections}>
-        <Section title="Pour toi">
-          <ShopCardRowPlaceholder />
+        <Section title="Pour toi" actionLabel="Voir tout" onActionPress={openSearch}>
+          <ShopRail
+            shops={FOR_YOU_SHOPS}
+            variant="standard"
+            itemWidth={cardWidths.standard}
+            snap
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            accessibilityLabel="Boutiques sélectionnées pour toi"
+          />
         </Section>
 
-        <Section title="Pépites cachées">
-          <ShopCardRowPlaceholder />
+        <Section title="Pépites cachées" actionLabel="Voir tout" onActionPress={openSearch}>
+          <ShopRail
+            shops={HIDDEN_GEM_SHOPS}
+            variant="featured"
+            itemWidth={cardWidths.featured}
+            snap
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            accessibilityLabel="Pépites cachées"
+          />
         </Section>
 
-        <Section title="Nouveautés">
-          <ShopCardRowPlaceholder />
+        <Section title="Nouveautés" actionLabel="Voir tout" onActionPress={openSearch}>
+          <ShopRail
+            shops={NEW_SHOPS}
+            variant="compact"
+            itemWidth={COMPACT_CARD_WIDTH}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            accessibilityLabel="Boutiques récemment ajoutées"
+          />
         </Section>
       </View>
     </Screen>
   );
 }
 
-const CARD_WIDTH = 176;
-
-function ShopCardRowPlaceholder() {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      // Cancel the screen gutter so cards can bleed to the edge while scrolling.
-      style={styles.rowBleed}>
-      {[0, 1, 2].map((index) => (
-        <ShopCardSkeleton key={index} width={CARD_WIDTH} />
-      ))}
-    </ScrollView>
-  );
-}
-
 const styles = StyleSheet.create({
-  header: {
-    gap: spacing.xxs,
-    marginBottom: spacing.lg,
-  },
   sections: {
     gap: layout.sectionGap,
-    marginTop: layout.sectionGap,
-  },
-  rowBleed: {
-    marginHorizontal: -layout.screenPadding,
-  },
-  row: {
-    gap: spacing.sm,
-    paddingHorizontal: layout.screenPadding,
+    marginTop: spacing.xl,
   },
 });
