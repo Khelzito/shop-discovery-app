@@ -8,6 +8,7 @@ export { EmptyState, type EmptyStateProps } from './empty-state';
 export { FavoriteButton, type FavoriteButtonProps } from './favorite-button';
 export { Icon, type IconName, type IconProps } from './icon';
 export { getInitials, ImageFrame, type ImageFrameProps, type ImageFrameRatio } from './image-frame';
+export { ListRow, ListRowGroup, type ListRowProps } from './list-row';
 export { Screen, type ScreenProps } from './screen';
 export { SearchField, type SearchFieldProps } from './search-field';
 export { Section, type SectionProps } from './section';

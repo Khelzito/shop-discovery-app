@@ -30,6 +30,7 @@ const ICONS = {
   check: 'check',
   filter: 'sliders',
   info: 'info',
+  help: 'help-circle',
   alert: 'alert-circle',
   image: 'image',
   shop: 'shopping-bag',
