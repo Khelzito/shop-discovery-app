@@ -10,6 +10,11 @@ export type FavoriteButtonProps = {
   /** Name of the thing being favorited, used to build the a11y label. */
   label: string;
   size?: 'sm' | 'md';
+  /**
+   * `overlay` floats over a photograph and needs its own light chip.
+   * `bare` sits on the page background and carries no resting fill.
+   */
+  variant?: 'overlay' | 'bare';
   style?: StyleProp<ViewStyle>;
 };
 
@@ -29,6 +34,7 @@ export function FavoriteButton({
   onPress,
   label,
   size = 'md',
+  variant = 'overlay',
   style,
 }: FavoriteButtonProps) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -63,16 +69,27 @@ export function FavoriteButton({
         style={[
           styles.chip,
           { width: dimension, height: dimension, transform: [{ scale }] },
-          active ? styles.chipActive : styles.chipResting,
+          active
+            ? styles.chipActive
+            : variant === 'overlay'
+              ? styles.chipResting
+              : styles.chipBare,
         ]}>
         <Icon
           name="favorite"
           size={size === 'sm' ? 14 : 16}
-          color={active ? colors.textInverse : colors.textPrimary}
+          color={restingIconColor(active, variant)}
         />
       </Animated.View>
     </Pressable>
   );
+}
+
+function restingIconColor(active: boolean, variant: 'overlay' | 'bare'): string {
+  if (active) {
+    return colors.textInverse;
+  }
+  return variant === 'overlay' ? colors.textPrimary : colors.iconMuted;
 }
 
 const styles = StyleSheet.create({
@@ -83,6 +100,9 @@ const styles = StyleSheet.create({
   },
   chipResting: {
     backgroundColor: colors.overlayChip,
+  },
+  chipBare: {
+    backgroundColor: 'transparent',
   },
   chipActive: {
     backgroundColor: colors.actionPrimary,

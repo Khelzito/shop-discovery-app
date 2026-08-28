@@ -58,6 +58,8 @@ export const colors = {
 
   /** Overlay above imagery. */
   scrim: 'rgba(17, 17, 17, 0.32)',
+  /** Heavier overlay, for white text sitting directly on a photograph. */
+  scrimStrong: 'rgba(17, 17, 17, 0.42)',
   /** Resting background for a control floating over a photograph. */
   overlayChip: 'rgba(255, 255, 255, 0.92)',
   /** Same control while pressed. */

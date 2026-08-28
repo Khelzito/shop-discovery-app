@@ -3,6 +3,7 @@
  * Inspect this list before creating a new component (docs/MASTER_SPEC.md §16).
  */
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './button';
+export { Chip, type ChipProps } from './chip';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { FavoriteButton, type FavoriteButtonProps } from './favorite-button';
 export { Icon, type IconName, type IconProps } from './icon';

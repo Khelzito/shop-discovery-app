@@ -1,25 +1,17 @@
+import { demoPhoto } from '@/data/demo-photo';
 import type { Shop } from '@/types/shop';
 
 /**
  * The single mock shop catalogue for the visual prototype.
  *
  * Every screen reads its shops from here. Do not declare shop objects inside
- * components. This module is replaced by the Supabase read model in a later
- * phase; the exported selectors are the seam.
+ * components, and do not start a second catalogue. This module is replaced by
+ * the Supabase read model in a later phase; the exported selectors are the
+ * seam.
  *
- * IMAGERY — read before touching this file.
- * The photographs are neutral stock images used purely to evaluate layout.
- * They are demo placeholders, not merchant-owned content, and no shop below
- * is a real business (every `website` uses the reserved `.example` TLD).
- * Images showing an identifiable real brand or product were deliberately
- * excluded so a demo visual can never be mistaken for a real merchant's
- * catalogue (docs/MASTER_SPEC.md §12).
+ * No shop below is a real business: every `website` uses the reserved
+ * `.example` TLD. See `data/demo-photo.ts` for the imagery rules.
  */
-
-/** Builds a demo photo URL at a size suited to a phone card. */
-function demoPhoto(id: string): string {
-  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
-}
 
 export const MOCK_SHOPS: readonly Shop[] = [
   {
