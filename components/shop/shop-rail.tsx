@@ -10,7 +10,7 @@ export type ShopRailProps = {
   itemWidth: number;
   /** Snap each card to the gutter. Off for lighter, free-scrolling rows. */
   snap?: boolean;
-  favorites: ReadonlySet<string>;
+  isFavorite: (shopId: string) => boolean;
   onToggleFavorite: (shopId: string) => void;
   onPressShop?: (shop: Shop) => void;
   accessibilityLabel: string;
@@ -29,7 +29,7 @@ export function ShopRail({
   variant,
   itemWidth,
   snap = false,
-  favorites,
+  isFavorite,
   onToggleFavorite,
   onPressShop,
   accessibilityLabel,
@@ -50,7 +50,7 @@ export function ShopRail({
           shop={shop}
           variant={variant}
           width={itemWidth}
-          favorite={favorites.has(shop.id)}
+          favorite={isFavorite(shop.id)}
           onToggleFavorite={onToggleFavorite}
           onPress={onPressShop}
         />

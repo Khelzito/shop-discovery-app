@@ -248,12 +248,13 @@ export const NEW_SHOPS: readonly Shop[] = [
 ];
 
 /**
- * Shops the demo user has already saved.
+ * Seeds the favorites store so the app opens on a populated collection.
  *
- * Stands in for the favorites table until it exists, so the Favoris screen
- * opens on a populated collection rather than an empty state.
+ * Read once by `FavoritesProvider` at start-up and never again: from then on
+ * the store is the only source of truth for what is favorited. No screen
+ * adds favorites of its own.
  */
-export const FAVORITE_SHOPS: readonly Shop[] = [
+export const SEED_FAVORITE_SHOPS: readonly Shop[] = [
   byId('maison-leon'),
   byId('lune-studio'),
   byId('atelier-noma'),

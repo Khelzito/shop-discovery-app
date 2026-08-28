@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { CategoryFilter } from '@/components/shop/category-filter';
@@ -9,6 +9,7 @@ import { matchesCategory } from '@/data/explore-categories';
 import { INSPIRATIONS } from '@/data/inspirations';
 import { MOCK_SHOPS } from '@/data/mock-shops';
 import { countryLabel } from '@/lib/format';
+import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
 import type { Shop } from '@/types/shop';
 
@@ -29,19 +30,7 @@ export default function ExploreScreen() {
   const { width } = useWindowDimensions();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
-
-  const toggleFavorite = useCallback((shopId: string) => {
-    setFavorites((current) => {
-      const next = new Set(current);
-      if (next.has(shopId)) {
-        next.delete(shopId);
-      } else {
-        next.add(shopId);
-      }
-      return next;
-    });
-  }, []);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const trimmedQuery = query.trim();
   const isBrowsing = trimmedQuery.length === 0 && category === null;
@@ -81,7 +70,7 @@ export default function ExploreScreen() {
                 <ShopRow
                   key={shop.id}
                   shop={shop}
-                  favorite={favorites.has(shop.id)}
+                  favorite={isFavorite(shop.id)}
                   onToggleFavorite={toggleFavorite}
                 />
               ))}

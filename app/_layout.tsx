@@ -2,6 +2,7 @@ import { DefaultTheme, ThemeProvider, type Theme } from '@react-navigation/nativ
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { FavoritesProvider } from '@/state/favorites';
 import { colors } from '@/theme';
 
 export const unstable_settings = {
@@ -28,12 +29,14 @@ const navigationTheme: Theme = {
 export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
-      <Stack
-        screenOptions={{
-          contentStyle: { backgroundColor: colors.background },
-        }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <FavoritesProvider>
+        <Stack
+          screenOptions={{
+            contentStyle: { backgroundColor: colors.background },
+          }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </FavoritesProvider>
       <StatusBar style="dark" />
     </ThemeProvider>
   );

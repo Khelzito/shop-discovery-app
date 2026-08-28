@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ShopCard } from '@/components/shop/shop-card';
 import { EmptyState, Screen, Text } from '@/components/ui';
-import { FAVORITE_SHOPS, MOCK_SHOPS } from '@/data/mock-shops';
+import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
 
 const COLUMN_GAP = spacing.sm;
@@ -13,27 +12,13 @@ const COLUMN_GAP = spacing.sm;
  * Favoris — the user's own collection of saved shops.
  *
  * A two-column grid where the photography is the card: no surface, no border,
- * no shadow. Removing a favorite is immediate and local; the favorites table
- * arrives with authentication in a later phase.
+ * no shadow. The screen is a pure view onto the shared favorites store, so a
+ * shop saved from Accueil or Explorer is already here, and removing one here
+ * empties its heart everywhere.
  */
 export default function FavoritesScreen() {
   const { width } = useWindowDimensions();
-  const [favoriteIds, setFavoriteIds] = useState<ReadonlySet<string>>(
-    () => new Set(FAVORITE_SHOPS.map((shop) => shop.id))
-  );
-
-  const shops = useMemo(
-    () => MOCK_SHOPS.filter((shop) => favoriteIds.has(shop.id)),
-    [favoriteIds]
-  );
-
-  const removeFavorite = (shopId: string) => {
-    setFavoriteIds((current) => {
-      const next = new Set(current);
-      next.delete(shopId);
-      return next;
-    });
-  };
+  const { favoriteShops, toggleFavorite } = useFavorites();
 
   const cardWidth = Math.floor((width - layout.screenPadding * 2 - COLUMN_GAP) / 2);
 
@@ -41,15 +26,15 @@ export default function FavoritesScreen() {
     <Screen scroll>
       <Text variant="title">Favoris</Text>
 
-      {shops.length > 0 ? (
+      {favoriteShops.length > 0 ? (
         <View style={styles.grid}>
-          {shops.map((shop) => (
+          {favoriteShops.map((shop) => (
             <ShopCard
               key={shop.id}
               shop={shop}
               width={cardWidth}
               favorite
-              onToggleFavorite={removeFavorite}
+              onToggleFavorite={toggleFavorite}
             />
           ))}
         </View>

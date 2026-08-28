@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { featuredCardWidth, standardCardWidth } from '@/components/shop/shop-card';
 import { ShopRail } from '@/components/shop/shop-rail';
 import { Screen, SearchField, Section } from '@/components/ui';
 import { FOR_YOU_SHOPS, HIDDEN_GEM_SHOPS, NEW_SHOPS } from '@/data/mock-shops';
+import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
 
 const COMPACT_CARD_WIDTH = 140;
@@ -20,19 +21,7 @@ const COMPACT_CARD_WIDTH = 140;
  */
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
-  const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
-
-  const toggleFavorite = useCallback((shopId: string) => {
-    setFavorites((current) => {
-      const next = new Set(current);
-      if (next.has(shopId)) {
-        next.delete(shopId);
-      } else {
-        next.add(shopId);
-      }
-      return next;
-    });
-  }, []);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const cardWidths = useMemo(
     () => ({
@@ -61,7 +50,7 @@ export default function HomeScreen() {
             variant="standard"
             itemWidth={cardWidths.standard}
             snap
-            favorites={favorites}
+            isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             accessibilityLabel="Boutiques sélectionnées pour toi"
           />
@@ -73,7 +62,7 @@ export default function HomeScreen() {
             variant="featured"
             itemWidth={cardWidths.featured}
             snap
-            favorites={favorites}
+            isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             accessibilityLabel="Pépites cachées"
           />
@@ -84,7 +73,7 @@ export default function HomeScreen() {
             shops={NEW_SHOPS}
             variant="compact"
             itemWidth={COMPACT_CARD_WIDTH}
-            favorites={favorites}
+            isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             accessibilityLabel="Boutiques récemment ajoutées"
           />
