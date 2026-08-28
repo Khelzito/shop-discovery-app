@@ -8,6 +8,7 @@ import { Screen, SearchField, Section } from '@/components/ui';
 import { FOR_YOU_SHOPS, HIDDEN_GEM_SHOPS, NEW_SHOPS } from '@/data/mock-shops';
 import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
+import type { Shop } from '@/types/shop';
 
 const COMPACT_CARD_WIDTH = 140;
 
@@ -32,6 +33,7 @@ export default function HomeScreen() {
   );
 
   const openSearch = () => router.push('/explore');
+  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
 
   return (
     <Screen scroll>
@@ -52,6 +54,7 @@ export default function HomeScreen() {
             snap
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
+            onPressShop={openShop}
             accessibilityLabel="Boutiques sélectionnées pour toi"
           />
         </Section>
@@ -64,6 +67,7 @@ export default function HomeScreen() {
             snap
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
+            onPressShop={openShop}
             accessibilityLabel="Pépites cachées"
           />
         </Section>
@@ -75,6 +79,7 @@ export default function HomeScreen() {
             itemWidth={COMPACT_CARD_WIDTH}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
+            onPressShop={openShop}
             accessibilityLabel="Boutiques récemment ajoutées"
           />
         </Section>

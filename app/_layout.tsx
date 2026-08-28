@@ -35,6 +35,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: colors.background },
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="shop/[id]" options={{ headerShown: false }} />
         </Stack>
       </FavoritesProvider>
       <StatusBar style="dark" />

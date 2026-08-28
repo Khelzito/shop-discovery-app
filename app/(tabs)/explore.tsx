@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -45,6 +46,8 @@ export default function ExploreScreen() {
     setCategory(null);
   };
 
+  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
+
   const inspirationWidth = Math.round((width - layout.screenPadding * 2) * 0.74);
 
   return (
@@ -72,6 +75,7 @@ export default function ExploreScreen() {
                   shop={shop}
                   favorite={isFavorite(shop.id)}
                   onToggleFavorite={toggleFavorite}
+                  onPress={openShop}
                 />
               ))}
             </View>

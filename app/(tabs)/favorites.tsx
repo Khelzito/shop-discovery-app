@@ -5,6 +5,7 @@ import { ShopCard } from '@/components/shop/shop-card';
 import { EmptyState, Screen, Text } from '@/components/ui';
 import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
+import type { Shop } from '@/types/shop';
 
 const COLUMN_GAP = spacing.sm;
 
@@ -19,6 +20,8 @@ const COLUMN_GAP = spacing.sm;
 export default function FavoritesScreen() {
   const { width } = useWindowDimensions();
   const { favoriteShops, toggleFavorite } = useFavorites();
+
+  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
 
   const cardWidth = Math.floor((width - layout.screenPadding * 2 - COLUMN_GAP) / 2);
 
@@ -35,6 +38,7 @@ export default function FavoritesScreen() {
               width={cardWidth}
               favorite
               onToggleFavorite={toggleFavorite}
+              onPress={openShop}
             />
           ))}
         </View>

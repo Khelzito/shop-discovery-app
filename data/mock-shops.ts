@@ -212,6 +212,11 @@ export const MOCK_SHOPS: readonly Shop[] = [
   },
 ];
 
+/** Looks a shop up by id. Returns undefined for an unknown id. */
+export function findShopById(id: string): Shop | undefined {
+  return MOCK_SHOPS.find((shop) => shop.id === id);
+}
+
 const byId = (id: string): Shop => {
   const shop = MOCK_SHOPS.find((candidate) => candidate.id === id);
   if (!shop) {
