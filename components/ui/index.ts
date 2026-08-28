@@ -16,4 +16,5 @@ export { Section, type SectionProps } from './section';
 export { ShopCardSkeleton, Skeleton, type SkeletonProps } from './skeleton';
 export { Tag } from './tag';
 export { Text, type TextProps, type TextTone } from './text';
+export { TextField, type TextFieldProps } from './text-field';
 export { VerifiedMark, type VerifiedMarkProps } from './verified-mark';

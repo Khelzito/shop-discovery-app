@@ -2,6 +2,7 @@ import { DefaultTheme, ThemeProvider, type Theme } from '@react-navigation/nativ
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { AuthProvider } from '@/state/auth';
 import { FavoritesProvider } from '@/state/favorites';
 import { colors } from '@/theme';
 
@@ -29,15 +30,19 @@ const navigationTheme: Theme = {
 export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
-      <FavoritesProvider>
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.background },
-          }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="shop/[id]" options={{ headerShown: false }} />
-        </Stack>
-      </FavoritesProvider>
+      <AuthProvider>
+        <FavoritesProvider>
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: colors.background },
+            }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="shop/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+            <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+          </Stack>
+        </FavoritesProvider>
+      </AuthProvider>
       <StatusBar style="dark" />
     </ThemeProvider>
   );
