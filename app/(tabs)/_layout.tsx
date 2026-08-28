@@ -6,7 +6,7 @@ import { colors, layout, typography } from '@/theme';
 
 /**
  * V1 ends with exactly four tabs (Accueil, Explorer, Favoris, Profil).
- * Favoris and Profil arrive with the navigation skeleton in a later phase.
+ * Profil arrives in a later phase.
  */
 export default function TabLayout() {
   return (
@@ -38,6 +38,13 @@ export default function TabLayout() {
         options={{
           title: 'Explorer',
           tabBarIcon: ({ color }) => <Icon name="explore" size="lg" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: 'Favoris',
+          tabBarIcon: ({ color }) => <Icon name="favorite" size="lg" color={color} />,
         }}
       />
     </Tabs>

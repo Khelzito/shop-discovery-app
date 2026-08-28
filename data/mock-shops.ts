@@ -246,3 +246,16 @@ export const NEW_SHOPS: readonly Shop[] = [
   byId('nord-et-fils'),
   byId('verte-rue'),
 ];
+
+/**
+ * Shops the demo user has already saved.
+ *
+ * Stands in for the favorites table until it exists, so the Favoris screen
+ * opens on a populated collection rather than an empty state.
+ */
+export const FAVORITE_SHOPS: readonly Shop[] = [
+  byId('maison-leon'),
+  byId('lune-studio'),
+  byId('atelier-noma'),
+  byId('sneaklab'),
+];
