@@ -1,4 +1,4 @@
-import type { Session } from '@supabase/supabase-js';
+import type { AuthError, Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
@@ -99,7 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: email.trim(),
           password,
         });
-        return { error: error ? translateAuthError(error.message) : null };
+        if (error) {
+          logAuthError('signIn', error);
+          return { error: translateAuthError(error) };
+        }
+        return { error: null };
       },
 
       signUp: async (firstName, email, password) => {
@@ -112,7 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           options: { data: { first_name: firstName.trim() } },
         });
         if (error) {
-          return { error: translateAuthError(error.message) };
+          logAuthError('signUp', error);
+          return { error: translateAuthError(error) };
         }
         // Supabase returns a user without a session when email confirmation
         // is switched on for the project.
@@ -123,7 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!supabase) {
           return;
         }
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          logAuthError('signOut', error);
+        }
       },
     }),
     [status, session, user]
@@ -141,28 +149,61 @@ export function useAuth(): AuthContextValue {
 }
 
 /**
- * Supabase returns English messages. Map the ones a user actually hits and
- * fall back to something calm rather than leaking a raw API string.
+ * Logs the real Supabase failure during development.
+ *
+ * Deliberately limited to message, status, code and name. Never log the
+ * password, the access or refresh token, the Supabase key, or the session.
  */
-function translateAuthError(message: string): string {
-  const normalized = message.toLowerCase();
+function logAuthError(action: 'signIn' | 'signUp' | 'signOut', error: AuthError): void {
+  if (!__DEV__) {
+    return;
+  }
+  console.warn(
+    `[auth:${action}] ${error.name}: ${error.message} ` +
+      `(status=${error.status ?? 'n/a'}, code=${error.code ?? 'n/a'})`
+  );
+}
 
-  if (normalized.includes('invalid login credentials')) {
-    return 'Email ou mot de passe incorrect.';
+/**
+ * Supabase answers in English. Translate on the stable error code first and
+ * only fall back to the message, which is free text and changes between
+ * versions — matching on it alone silently collapsed distinct failures
+ * (a rejected email, a bad API key) into one unhelpful message.
+ */
+function translateAuthError(error: AuthError): string {
+  switch (error.code) {
+    case 'invalid_credentials':
+      return 'Email ou mot de passe incorrect.';
+    case 'email_exists':
+    case 'user_already_exists':
+      return 'Un compte existe déjà avec cet email.';
+    case 'weak_password':
+      return 'Le mot de passe doit contenir au moins 6 caractères.';
+    case 'email_address_invalid':
+    case 'email_address_not_authorized':
+      return 'Cet email ne semble pas valide. Essaie une autre adresse.';
+    case 'email_not_confirmed':
+      return 'Confirme ton email avant de te connecter.';
+    case 'signup_disabled':
+      return 'Les inscriptions sont désactivées sur ce projet.';
+    case 'email_provider_disabled':
+      return 'La connexion par email est désactivée sur ce projet.';
+    case 'over_email_send_rate_limit':
+    case 'over_request_rate_limit':
+      return 'Trop de tentatives. Réessaie dans quelques minutes.';
+    case 'validation_failed':
+      return 'Vérifie les informations saisies.';
+    default:
+      break;
   }
-  if (normalized.includes('already registered') || normalized.includes('already been registered')) {
-    return 'Un compte existe déjà avec cet email.';
+
+  // Failures that arrive without a code, including a rejected API key.
+  const message = error.message.toLowerCase();
+
+  if (error.status === 401 || message.includes('invalid api key')) {
+    return 'Clé Supabase invalide. Vérifie EXPO_PUBLIC_SUPABASE_ANON_KEY dans .env, puis relance avec --clear.';
   }
-  if (normalized.includes('password should be at least')) {
-    return 'Le mot de passe doit contenir au moins 6 caractères.';
-  }
-  if (normalized.includes('unable to validate email') || normalized.includes('invalid email')) {
-    return 'Cet email ne semble pas valide.';
-  }
-  if (normalized.includes('email not confirmed')) {
-    return 'Confirme ton email avant de te connecter.';
-  }
-  if (normalized.includes('network') || normalized.includes('fetch')) {
+  if (message.includes('network') || message.includes('fetch')) {
     return 'Connexion impossible. Vérifie ta connexion internet.';
   }
   return 'Une erreur est survenue. Réessaie dans un instant.';

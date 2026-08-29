@@ -38,6 +38,26 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
     })
   : null;
 
+/**
+ * Development check on the credentials themselves.
+ *
+ * A placeholder left in `.env` makes both variables look present while every
+ * request comes back 401, so flag the shape early. The key itself is never
+ * logged — only whether it looks like a Supabase key.
+ */
+if (__DEV__) {
+  if (!isSupabaseConfigured) {
+    console.warn(
+      '[supabase] EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY is missing — auth is disabled.'
+    );
+  } else if (!/^(sb_publishable_|eyJ)/.test(supabaseKey as string)) {
+    console.warn(
+      '[supabase] EXPO_PUBLIC_SUPABASE_ANON_KEY does not look like a Supabase key ' +
+        '(expected sb_publishable_… or eyJ…). Check .env, then restart with --clear.'
+    );
+  }
+}
+
 // Refresh tokens only while the app is in the foreground.
 if (supabase) {
   AppState.addEventListener('change', (state) => {
