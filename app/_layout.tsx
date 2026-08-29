@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider } from '@/state/auth';
 import { FavoritesProvider } from '@/state/favorites';
+import { PreferencesProvider } from '@/state/preferences';
 import { colors } from '@/theme';
 
 export const unstable_settings = {
@@ -31,17 +32,23 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
       <AuthProvider>
-        <FavoritesProvider>
-          <Stack
-            screenOptions={{
-              contentStyle: { backgroundColor: colors.background },
-            }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="shop/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-            <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-          </Stack>
-        </FavoritesProvider>
+        <PreferencesProvider>
+          <FavoritesProvider>
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: colors.background },
+              }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="shop/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+              <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+              <Stack.Screen name="account" options={{ headerShown: false }} />
+              <Stack.Screen name="preferences" options={{ headerShown: false }} />
+              <Stack.Screen name="help/index" options={{ headerShown: false }} />
+              <Stack.Screen name="help/[topic]" options={{ headerShown: false }} />
+            </Stack>
+          </FavoritesProvider>
+        </PreferencesProvider>
       </AuthProvider>
       <StatusBar style="dark" />
     </ThemeProvider>

@@ -50,9 +50,13 @@ export default function ProfileScreen() {
           <View style={styles.entries}>
             <ListRowGroup
               rows={[
-                { icon: 'profile', label: 'Compte' },
-                { icon: 'settings', label: 'Préférences' },
-                { icon: 'help', label: 'Aide' },
+                { icon: 'profile', label: 'Compte', onPress: () => router.push('/account') },
+                {
+                  icon: 'settings',
+                  label: 'Préférences',
+                  onPress: () => router.push('/preferences'),
+                },
+                { icon: 'help', label: 'Aide', onPress: () => router.push('/help') },
               ]}
             />
           </View>

@@ -22,6 +22,8 @@ type AuthContextValue = {
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (firstName: string, email: string, password: string) => Promise<AuthResult>;
+  /** Persists the display name into the auth user's metadata. */
+  updateFirstName: (firstName: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
 };
 
@@ -124,6 +126,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: null, needsEmailConfirmation: data.session === null };
       },
 
+      updateFirstName: async (firstName) => {
+        if (!supabase) {
+          return NOT_CONFIGURED;
+        }
+        // No profiles table yet, so the display name lives in the auth user's
+        // metadata. `onAuthStateChange` reports USER_UPDATED, which refreshes
+        // the session and therefore every screen reading it.
+        const { error } = await supabase.auth.updateUser({
+          data: { first_name: firstName.trim() },
+        });
+        if (error) {
+          logAuthError('updateUser', error);
+          return { error: translateAuthError(error) };
+        }
+        return { error: null };
+      },
+
       signOut: async () => {
         if (!supabase) {
           return;
@@ -154,7 +173,10 @@ export function useAuth(): AuthContextValue {
  * Deliberately limited to message, status, code and name. Never log the
  * password, the access or refresh token, the Supabase key, or the session.
  */
-function logAuthError(action: 'signIn' | 'signUp' | 'signOut', error: AuthError): void {
+function logAuthError(
+  action: 'signIn' | 'signUp' | 'signOut' | 'updateUser',
+  error: AuthError
+): void {
   if (!__DEV__) {
     return;
   }

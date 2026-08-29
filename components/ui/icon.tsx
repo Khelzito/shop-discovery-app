@@ -31,6 +31,7 @@ const ICONS = {
   filter: 'sliders',
   info: 'info',
   help: 'help-circle',
+  mail: 'mail',
   alert: 'alert-circle',
   image: 'image',
   shop: 'shopping-bag',
