@@ -1,0 +1,17 @@
+{
+  "//": "Standalone on purpose: the Expo base config targets a bundler, and the AI module is plain TypeScript that must also run under Node and later Deno.",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": false,
+    "outDir": "dist-test",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2022",
+    "lib": ["es2022"],
+    "types": ["node"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["ai/**/*.ts"]
+}

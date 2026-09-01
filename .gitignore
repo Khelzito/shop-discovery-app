@@ -38,6 +38,7 @@ Thumbs.db
 
 # typescript
 *.tsbuildinfo
+dist-test/
 
 app-example
 
