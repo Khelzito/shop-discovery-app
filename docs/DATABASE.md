@@ -190,3 +190,26 @@ At minimum plan indexes for:
 
 ## Storage intent
 Buckets/policies should separate public shop media from private/sensitive verification material. Never expose identity/business verification documents publicly.
+
+## Implementation status
+
+The schema is implemented in `supabase/migrations/`, which is the source of
+truth. This document remains the intent; where the two differ, the migration
+wins and the reason is stated below.
+
+Deliberate deviations from the outline above:
+
+- **Enums replaced by `text` + `CHECK`.** Every controlled vocabulary here is
+  expected to gain values before launch. A `CHECK` is altered in one statement;
+  an enum cannot drop or reorder values.
+- **`shop_analysis_runs` merged into `shop_ai_analyses`.** Run metadata and the
+  structured output are written and read together; splitting them bought
+  nothing.
+- **`price_min` / `price_max` / `currency_code` added** alongside `price_level`,
+  so natural-language budget queries ("autour de 100 €") have real data to
+  filter on. `price_level` is kept for coarse filtering.
+- **Verification is exposed through `shop_public_verifications`**, a read-only
+  view over approved records. There is no `verified` column anywhere.
+- **`shop_embeddings` and `help_article_embeddings` use an unconstrained
+  `vector`** because no embedding model has been chosen. They cannot be
+  indexed until the dimension is fixed. See the migration header.
