@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Chip, IconButton, Screen, Section, Text } from '@/components/ui';
-import { EXPLORE_CATEGORIES } from '@/data/explore-categories';
+import { INTEREST_OPTIONS } from '@/data/explore-categories';
 import { countryLabel } from '@/lib/format';
 import { usePreferences } from '@/state/preferences';
 import { layout, spacing } from '@/theme';
@@ -32,7 +32,7 @@ export default function PreferencesScreen() {
       <View style={styles.sections}>
         <Section title="Centres d’intérêt">
           <View style={styles.chips}>
-            {EXPLORE_CATEGORIES.map((category) => (
+            {INTEREST_OPTIONS.map((category) => (
               <Chip
                 key={category.id}
                 label={category.label}

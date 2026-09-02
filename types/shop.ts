@@ -1,33 +1,53 @@
 /**
- * Shop domain model.
+ * The consumer-facing shop model.
  *
- * This mirrors the shape the Supabase read model will expose later
- * (docs/DATABASE.md), so screens built against the mock data keep working
- * once real data arrives.
+ * This is what the UI is allowed to know. It is a deliberate projection of the
+ * database, not a mirror of it: moderation state, verification evidence, AI
+ * inferences and confidences, claim and submission internals, and member data
+ * all exist in the schema and none of them appear here. RLS and column grants
+ * make them unreachable from the client anyway; this model makes it obvious.
+ *
+ * Every field is factual or publicly derived. Nothing here is AI-inferred.
  */
 
+/** 1 = accessible, 4 = luxury. Declared by the merchant. */
+export type PriceLevel = 1 | 2 | 3 | 4;
+
+export type ShopCategoryRef = {
+  slug: string;
+  name: string;
+  /** One category per shop may be primary; it drives the card's single label. */
+  isPrimary: boolean;
+};
+
 export type ShopImages = {
-  /** Main editorial visual. `null` when the shop has no usable imagery yet. */
+  /** Main visual, or null when the shop has none usable yet. */
   cover: string | null;
-  /** Additional visuals, used by the shop profile in a later phase. */
+  /** Additional visuals in deterministic order. */
   gallery: string[];
 };
 
-/** 1 = accessible, 2 = milieu de gamme, 3 = premium. */
-export type PriceLevel = 1 | 2 | 3;
-
 export type Shop = {
+  /** Database uuid. Stable, and what favourites and routes key on. */
   id: string;
+  slug: string;
   name: string;
-  /** Single positioning label. Home shows exactly one category per shop. */
-  category: string;
-  /** ISO 3166-1 alpha-2. */
-  country: string;
-  description: string;
-  /** Trust status is granted server-side and can never be purchased. */
-  verified: boolean;
-  images: ShopImages;
+  shortDescription: string | null;
+  /** Validated http(s), or null. Never a placeholder. */
+  websiteUrl: string | null;
+  countryCode: string | null;
+  city: string | null;
+  priceLevel: PriceLevel | null;
+  categories: ShopCategoryRef[];
+  /** Convenience: the primary category, else the first, else null. */
+  primaryCategory: ShopCategoryRef | null;
   tags: string[];
-  priceLevel: PriceLevel;
-  website: string;
+  images: ShopImages;
+  /**
+   * Derived from approved, unexpired verification records the client is
+   * allowed to see. There is no editable `verified` column anywhere, and no
+   * client can write this.
+   */
+  verified: boolean;
+  publishedAt: string | null;
 };

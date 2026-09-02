@@ -20,6 +20,11 @@
     "rewriteRelativeImportExtensions": true
   },
   "include": [
-    "ai/**/*.ts"
+    "ai/**/*.ts",
+    "data/shops/mapper.ts",
+    "data/shops/home-sections.ts",
+    "data/shops/mapper.test.ts",
+    "types/shop.ts",
+    "lib/http-url.ts"
   ]
 }

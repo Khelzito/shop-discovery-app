@@ -16,10 +16,19 @@ export function countryLabel(code: string): string {
   return COUNTRY_LABELS[code] ?? code;
 }
 
+/** The category shown on a card. Primary when one is set, else the first. */
+export function shopCategoryLabel(shop: Shop): string | null {
+  return shop.primaryCategory?.name ?? null;
+}
+
 /**
  * The single secondary line under a shop name, e.g. `Streetwear · France`.
  * One line, two facts: enough to situate a shop, nothing more.
+ *
+ * Both halves are optional in the database, so the separator only appears
+ * when there are two things to separate.
  */
 export function shopMetaLine(shop: Shop): string {
-  return `${shop.category} · ${countryLabel(shop.country)}`;
+  const parts = [shopCategoryLabel(shop), shop.countryCode ? countryLabel(shop.countryCode) : null];
+  return parts.filter((part): part is string => part !== null).join(' · ');
 }

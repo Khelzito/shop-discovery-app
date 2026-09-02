@@ -1,28 +1,42 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { featuredCardWidth, standardCardWidth } from '@/components/shop/shop-card';
 import { ShopRail } from '@/components/shop/shop-rail';
-import { Screen, SearchField, Section } from '@/components/ui';
-import { FOR_YOU_SHOPS, HIDDEN_GEM_SHOPS, NEW_SHOPS } from '@/data/mock-shops';
+import { EmptyState, Screen, SearchField, Section, ShopCardSkeleton } from '@/components/ui';
+import { buildHomeSections, getPublishedShops } from '@/data/shops';
+import { useAsyncResource } from '@/lib/use-async-resource';
 import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
 import type { Shop } from '@/types/shop';
 
 const COMPACT_CARD_WIDTH = 140;
+/** Enough to fill three sections without fetching a catalogue that will grow. */
+const HOME_SHOP_LIMIT = 24;
 
 /**
- * Home — the discovery entry point.
+ * Home — the discovery entry point, now reading published shops from Supabase.
  *
  * Three sections only: Pour toi, Pépites cachées, Nouveautés. No greeting, no
  * categories, no promotion, no explanation of why a shop is recommended
  * (docs/MASTER_SPEC.md §7). Content starts immediately under the search field
  * and photography carries the screen.
+ *
+ * How the three sections are filled is a documented placeholder living in
+ * `buildHomeSections`, not personalisation. This screen only renders them.
  */
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  const load = useCallback(() => getPublishedShops({ limit: HOME_SHOP_LIMIT }), []);
+  const shops = useAsyncResource(load);
+
+  const sections = useMemo(
+    () => buildHomeSections(shops.data?.shops ?? []),
+    [shops.data]
+  );
 
   const cardWidths = useMemo(
     () => ({
@@ -46,45 +60,93 @@ export default function HomeScreen() {
       />
 
       <View style={styles.sections}>
-        <Section title="Pour toi" actionLabel="Voir tout" onActionPress={openSearch}>
-          <ShopRail
-            shops={FOR_YOU_SHOPS}
-            variant="standard"
-            itemWidth={cardWidths.standard}
-            snap
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            onPressShop={openShop}
-            accessibilityLabel="Boutiques sélectionnées pour toi"
-          />
-        </Section>
+        {shops.status === 'loading' ? <HomeSkeleton width={cardWidths.standard} /> : null}
 
-        <Section title="Pépites cachées" actionLabel="Voir tout" onActionPress={openSearch}>
-          <ShopRail
-            shops={HIDDEN_GEM_SHOPS}
-            variant="featured"
-            itemWidth={cardWidths.featured}
-            snap
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            onPressShop={openShop}
-            accessibilityLabel="Pépites cachées"
+        {shops.status === 'error' ? (
+          <EmptyState
+            tone="error"
+            title="Chargement impossible"
+            description="Vérifie ta connexion et réessaie."
+            actionLabel="Réessayer"
+            onActionPress={shops.reload}
           />
-        </Section>
+        ) : null}
 
-        <Section title="Nouveautés" actionLabel="Voir tout" onActionPress={openSearch}>
-          <ShopRail
-            shops={NEW_SHOPS}
-            variant="compact"
-            itemWidth={COMPACT_CARD_WIDTH}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            onPressShop={openShop}
-            accessibilityLabel="Boutiques récemment ajoutées"
+        {shops.status === 'ready' && sections.newest.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title="Aucune boutique pour le moment"
+            description="De nouvelles boutiques arrivent bientôt."
           />
-        </Section>
+        ) : null}
+
+        {shops.status === 'ready' && sections.forYou.length > 0 ? (
+          <Section title="Pour toi" actionLabel="Voir tout" onActionPress={openSearch}>
+            <ShopRail
+              shops={sections.forYou}
+              variant="standard"
+              itemWidth={cardWidths.standard}
+              snap
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onPressShop={openShop}
+              accessibilityLabel="Boutiques sélectionnées pour toi"
+            />
+          </Section>
+        ) : null}
+
+        {shops.status === 'ready' && sections.hiddenGems.length > 0 ? (
+          <Section title="Pépites cachées" actionLabel="Voir tout" onActionPress={openSearch}>
+            <ShopRail
+              shops={sections.hiddenGems}
+              variant="featured"
+              itemWidth={cardWidths.featured}
+              snap
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onPressShop={openShop}
+              accessibilityLabel="Pépites cachées"
+            />
+          </Section>
+        ) : null}
+
+        {shops.status === 'ready' && sections.newest.length > 0 ? (
+          <Section title="Nouveautés" actionLabel="Voir tout" onActionPress={openSearch}>
+            <ShopRail
+              shops={sections.newest}
+              variant="compact"
+              itemWidth={COMPACT_CARD_WIDTH}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onPressShop={openShop}
+              accessibilityLabel="Boutiques récemment ajoutées"
+            />
+          </Section>
+        ) : null}
       </View>
     </Screen>
+  );
+}
+
+/** Mirrors the loaded layout so the screen does not jump when data arrives. */
+function HomeSkeleton({ width }: { width: number }) {
+  return (
+    <>
+      {['Pour toi', 'Pépites cachées', 'Nouveautés'].map((title) => (
+        <Section key={title} title={title}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={false}
+            style={styles.railBleed}
+            contentContainerStyle={styles.railContent}>
+            {[0, 1, 2].map((index) => (
+              <ShopCardSkeleton key={index} width={width} />
+            ))}
+          </ScrollView>
+        </Section>
+      ))}
+    </>
   );
 }
 
@@ -92,5 +154,12 @@ const styles = StyleSheet.create({
   sections: {
     gap: layout.sectionGap,
     marginTop: spacing.xl,
+  },
+  railBleed: {
+    marginHorizontal: -layout.screenPadding,
+  },
+  railContent: {
+    gap: spacing.sm,
+    paddingHorizontal: layout.screenPadding,
   },
 });

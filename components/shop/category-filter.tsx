@@ -1,13 +1,15 @@
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { Chip } from '@/components/ui/chip';
-import { EXPLORE_CATEGORIES } from '@/data/explore-categories';
+import type { CategoryOption } from '@/data/shops';
 import { layout, spacing } from '@/theme';
 
 export type CategoryFilterProps = {
-  /** `null` means no category is active. */
+  /** Active categories from the catalogue. Empty while they load. */
+  categories: readonly CategoryOption[];
+  /** Slug of the active category, or `null` for no filter. */
   selected: string | null;
-  onSelect: (categoryId: string | null) => void;
+  onSelect: (categorySlug: string | null) => void;
 };
 
 /**
@@ -17,7 +19,11 @@ export type CategoryFilterProps = {
  * of these, and forcing one would add noise to a control that must stay
  * secondary to search and to the photography below it.
  */
-export function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
+export function CategoryFilter({ categories, selected, onSelect }: CategoryFilterProps) {
+  if (categories.length === 0) {
+    return null;
+  }
+
   return (
     <ScrollView
       horizontal
@@ -25,13 +31,13 @@ export function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
       style={styles.bleed}
       contentContainerStyle={styles.content}
       accessibilityLabel="Catégories">
-      {EXPLORE_CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <Chip
           key={category.id}
-          label={category.label}
-          selected={selected === category.id}
+          label={category.name}
+          selected={selected === category.slug}
           // Tapping the active chip clears the filter.
-          onPress={() => onSelect(selected === category.id ? null : category.id)}
+          onPress={() => onSelect(selected === category.slug ? null : category.slug)}
         />
       ))}
     </ScrollView>

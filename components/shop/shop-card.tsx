@@ -4,6 +4,7 @@ import { FavoriteButton } from '@/components/ui/favorite-button';
 import { ImageFrame } from '@/components/ui/image-frame';
 import { Text } from '@/components/ui/text';
 import { VerifiedMark } from '@/components/ui/verified-mark';
+import { shopCategoryLabel } from '@/lib/format';
 import { layout, spacing } from '@/theme';
 import type { Shop } from '@/types/shop';
 
@@ -43,6 +44,7 @@ export function ShopCard({
   style,
 }: ShopCardProps) {
   const isCompact = variant === 'compact';
+  const category = shopCategoryLabel(shop);
 
   const body = (
     <>
@@ -68,9 +70,11 @@ export function ShopCard({
           </Text>
           {shop.verified ? <VerifiedMark /> : null}
         </View>
-        <Text variant={isCompact ? 'caption' : 'meta'} tone="secondary" numberOfLines={1}>
-          {shop.category}
-        </Text>
+        {category ? (
+          <Text variant={isCompact ? 'caption' : 'meta'} tone="secondary" numberOfLines={1}>
+            {category}
+          </Text>
+        ) : null}
       </View>
     </>
   );
@@ -85,7 +89,7 @@ export function ShopCard({
     <Pressable
       onPress={() => onPress(shop)}
       accessibilityRole="button"
-      accessibilityLabel={`${shop.name}, ${shop.category}`}
+      accessibilityLabel={category ? `${shop.name}, ${category}` : shop.name}
       style={({ pressed }) => [containerStyle, pressed && styles.pressed]}>
       {body}
     </Pressable>

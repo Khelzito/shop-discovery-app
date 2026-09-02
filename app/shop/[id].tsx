@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,13 +10,15 @@ import {
   IconButton,
   ImageFrame,
   Screen,
+  Skeleton,
   Tag,
   Text,
   VerifiedMark,
 } from '@/components/ui';
-import { findShopById } from '@/data/mock-shops';
+import { getShopByIdOrSlug } from '@/data/shops';
 import { shopMetaLine } from '@/lib/format';
-import { isExternalHttpUrl, openExternalUrl } from '@/lib/url';
+import { openExternalUrl } from '@/lib/url';
+import { useAsyncResource } from '@/lib/use-async-resource';
 import { useFavorites } from '@/state/favorites';
 import { colors, layout, spacing } from '@/theme';
 
@@ -23,12 +26,15 @@ const MAX_TAGS = 3;
 const GALLERY_WIDTH_RATIO = 0.62;
 
 /**
- * Shop profile — the core moment of the product.
+ * Shop profile — the core moment of the product, now backed by Supabase.
  *
  * The photograph dominates and the text stays minimal: name, one meta line,
- * two or three lines of description, a few quiet tags, and a single dominant
- * action. No price, cart, delivery, rating or stock — Shop Discovery is not a
+ * a short description, a few quiet tags, and a single dominant action. No
+ * price, cart, delivery, rating or stock — Shop Discovery is not a
  * marketplace, and buying happens on the merchant's own site.
+ *
+ * The route accepts the database uuid or the slug, so a shareable link can
+ * use the readable form later without changing anything here.
  *
  * Lives outside the `(tabs)` group, so the tab bar is naturally absent.
  */
@@ -38,7 +44,29 @@ export default function ShopDetailScreen() {
   const insets = useSafeAreaInsets();
   const { isFavorite, toggleFavorite } = useFavorites();
 
-  const shop = typeof id === 'string' ? findShopById(id) : undefined;
+  const identifier = typeof id === 'string' ? id : '';
+  const load = useCallback(() => getShopByIdOrSlug(identifier), [identifier]);
+  const resource = useAsyncResource(load);
+
+  if (resource.status === 'loading') {
+    return <DetailSkeleton width={width} />;
+  }
+
+  if (resource.status === 'error') {
+    return (
+      <Screen center>
+        <EmptyState
+          tone="error"
+          title="Chargement impossible"
+          description="Vérifie ta connexion et réessaie."
+          actionLabel="Réessayer"
+          onActionPress={resource.reload}
+        />
+      </Screen>
+    );
+  }
+
+  const shop = resource.data;
 
   if (!shop) {
     return (
@@ -54,7 +82,9 @@ export default function ShopDetailScreen() {
     );
   }
 
+  const metaLine = shopMetaLine(shop);
   const tags = shop.tags.slice(0, MAX_TAGS);
+  const websiteUrl = shop.websiteUrl;
   const galleryWidth = Math.round((width - layout.screenPadding * 2) * GALLERY_WIDTH_RATIO);
 
   return (
@@ -76,14 +106,18 @@ export default function ShopDetailScreen() {
               </Text>
               {shop.verified ? <VerifiedMark /> : null}
             </View>
-            <Text variant="body" tone="secondary">
-              {shopMetaLine(shop)}
-            </Text>
+            {metaLine.length > 0 ? (
+              <Text variant="body" tone="secondary">
+                {metaLine}
+              </Text>
+            ) : null}
           </View>
 
-          <Text variant="body" numberOfLines={3}>
-            {shop.description}
-          </Text>
+          {shop.shortDescription ? (
+            <Text variant="body" numberOfLines={3}>
+              {shop.shortDescription}
+            </Text>
+          ) : null}
 
           {tags.length > 0 ? (
             <View style={styles.tags}>
@@ -93,7 +127,8 @@ export default function ShopDetailScreen() {
             </View>
           ) : null}
 
-          {isExternalHttpUrl(shop.website) ? (
+          {/* Hidden rather than broken when the catalogue has no usable URL. */}
+          {websiteUrl ? (
             <Button
               label="Visiter la boutique"
               iconRight="external"
@@ -101,7 +136,7 @@ export default function ShopDetailScreen() {
               fullWidth
               style={styles.cta}
               onPress={() => {
-                void openExternalUrl(shop.website);
+                void openExternalUrl(websiteUrl);
               }}
             />
           ) : null}
@@ -142,6 +177,27 @@ export default function ShopDetailScreen() {
           onPress={() => toggleFavorite(shop.id)}
           label={shop.name}
         />
+      </View>
+    </View>
+  );
+}
+
+/** Mirrors the loaded layout so the hero does not jump into place. */
+function DetailSkeleton({ width }: { width: number }) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={styles.root}>
+      <Skeleton width={width} ratio={layout.imageRatio.portrait} radius="none" />
+      <View style={styles.body}>
+        <Skeleton width="70%" height={30} />
+        <Skeleton width="45%" height={20} />
+        <Skeleton width="100%" height={44} />
+      </View>
+      <View
+        pointerEvents="box-none"
+        style={[styles.floatingHeader, { top: insets.top + spacing.xs }]}>
+        <IconButton icon="back" onPress={() => router.back()} accessibilityLabel="Retour" />
       </View>
     </View>
   );
