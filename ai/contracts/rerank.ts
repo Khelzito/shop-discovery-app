@@ -1,5 +1,5 @@
-import type { Audience, CountryCode, PricePositioning, Slug } from './common';
-import type { ModelMetadata } from './model';
+import type { Audience, CountryCode, PricePositioning, Slug } from './common.ts';
+import type { ModelMetadata } from './model.ts';
 
 /**
  * A shop offered to a reranker.

@@ -1,5 +1,5 @@
-import type { AiErrorCode, AiErrorPayload } from '../contracts/errors';
-import { isRetryableAiErrorCode } from '../contracts/errors';
+import type { AiErrorCode, AiErrorPayload } from '../contracts/errors.ts';
+import { isRetryableAiErrorCode } from '../contracts/errors.ts';
 
 /**
  * Server-side AI errors.

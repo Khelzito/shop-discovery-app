@@ -8,9 +8,9 @@
  *
  * The app imports `@/ai/contracts` and talks to the backend over HTTP.
  */
-export * from './deterministic-intent';
-export * from './errors';
-export * from './persistence';
-export * from './providers';
-export * from './services';
-export * from './validation';
+export * from './deterministic-intent.ts';
+export * from './errors.ts';
+export * from './persistence.ts';
+export * from './providers.ts';
+export * from './services.ts';
+export * from './validation.ts';

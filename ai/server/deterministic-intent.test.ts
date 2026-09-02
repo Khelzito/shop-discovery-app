@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { DeterministicSearchIntentProvider } from './deterministic-intent';
-import type { IntentVocabulary } from './deterministic-intent';
-import { validateSearchIntent } from './validation';
+import { DeterministicSearchIntentProvider } from './deterministic-intent.ts';
+import type { IntentVocabulary } from './deterministic-intent.ts';
+import { validateSearchIntent } from './validation.ts';
 
 const VOCABULARY: IntentVocabulary = {
   categories: [

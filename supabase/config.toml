@@ -411,3 +411,11 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.ai-search-intent]
+enabled = true
+# The platform rejects any request without a valid JWT before the handler runs,
+# so the endpoint is authenticated-only by configuration rather than by a check
+# that could be forgotten. Anonymous search would need this set to false plus a
+# separate anonymous quota — see ai/SECURITY.md.
+verify_jwt = true

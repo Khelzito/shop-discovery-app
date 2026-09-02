@@ -1,8 +1,8 @@
-import type { CountryCode, LanguageCode } from './common';
-import type { AiErrorPayload } from './errors';
-import type { HelpAnswer, HelpQuery } from './help';
-import type { SearchIntent } from './search-intent';
-import type { ShopAnalysisRecord } from './shop-analysis';
+import type { CountryCode, LanguageCode } from './common.ts';
+import type { AiErrorPayload } from './errors.ts';
+import type { HelpAnswer, HelpQuery } from './help.ts';
+import type { SearchIntent } from './search-intent.ts';
+import type { ShopAnalysisRecord } from './shop-analysis.ts';
 
 /**
  * Wire contracts for the trusted backend.

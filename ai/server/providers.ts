@@ -1,10 +1,10 @@
-import type { EmbeddingBatchResult, EmbeddingInput, EmbeddingResult } from '../contracts/embedding';
-import type { SearchIntentRequest } from '../contracts/endpoints';
-import type { HelpAnswer, HelpContext } from '../contracts/help';
-import type { AiResult } from '../contracts/model';
-import type { RerankCandidate, RerankResult } from '../contracts/rerank';
-import type { SearchIntent } from '../contracts/search-intent';
-import type { ShopAnalysis } from '../contracts/shop-analysis';
+import type { EmbeddingBatchResult, EmbeddingInput, EmbeddingResult } from '../contracts/embedding.ts';
+import type { SearchIntentRequest } from '../contracts/endpoints.ts';
+import type { HelpAnswer, HelpContext } from '../contracts/help.ts';
+import type { AiResult } from '../contracts/model.ts';
+import type { RerankCandidate, RerankResult } from '../contracts/rerank.ts';
+import type { SearchIntent } from '../contracts/search-intent.ts';
+import type { ShopAnalysis } from '../contracts/shop-analysis.ts';
 
 /**
  * Provider interfaces.

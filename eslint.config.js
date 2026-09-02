@@ -6,7 +6,10 @@ module.exports = defineConfig([
   expoConfig,
   {
     // Build output and Expo-generated types (e.g. typed routes).
-    ignores: ['dist/*', '.expo/*', 'dist-test/*'],
+    // supabase/functions is Deno, not React Native: it uses Deno globals and
+    // npm:/jsr: specifiers this config cannot resolve. It is linted and
+    // type-checked by Deno's own tooling at deploy time.
+    ignores: ['dist/*', '.expo/*', 'dist-test/*', 'supabase/functions/**'],
   },
   {
     // The client/server AI boundary, enforced rather than documented.
@@ -54,8 +57,9 @@ module.exports = defineConfig([
     },
   },
   {
-    // The server tree is allowed to be the server tree.
-    files: ['ai/server/**/*.ts', 'supabase/functions/**/*.ts'],
+    // The server tree is allowed to be the server tree. (supabase/functions is
+    // ignored above, so it needs no exemption here.)
+    files: ['ai/server/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },
 ]);

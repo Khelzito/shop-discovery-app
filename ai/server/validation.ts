@@ -1,20 +1,21 @@
-import { AUDIENCES, POPULARITY_PREFERENCES, PRICE_POSITIONINGS } from '../contracts/common';
-import type { Audience, PopularityPreference, PricePositioning } from '../contracts/common';
-import { EMBEDDING_SOURCE_KINDS } from '../contracts/embedding';
-import type { EmbeddingResult } from '../contracts/embedding';
-import type { HelpAnswer, HelpSource } from '../contracts/help';
-import { HELP_REFUSAL_REASONS } from '../contracts/help';
-import type { ModelMetadata } from '../contracts/model';
-import type { RerankResult } from '../contracts/rerank';
-import { INTENT_SOURCES } from '../contracts/search-intent';
-import type { SearchIntent } from '../contracts/search-intent';
+import { AUDIENCES, POPULARITY_PREFERENCES, PRICE_POSITIONINGS } from '../contracts/common.ts';
+import type { Audience, PopularityPreference, PricePositioning } from '../contracts/common.ts';
+import { EMBEDDING_SOURCE_KINDS } from '../contracts/embedding.ts';
+import type { EmbeddingResult } from '../contracts/embedding.ts';
+import type { HelpAnswer, HelpSource } from '../contracts/help.ts';
+import { HELP_REFUSAL_REASONS } from '../contracts/help.ts';
+import type { ModelMetadata } from '../contracts/model.ts';
+import type { RerankResult } from '../contracts/rerank.ts';
+import type { SearchIntentRequest } from '../contracts/endpoints.ts';
+import { INTENT_SOURCES } from '../contracts/search-intent.ts';
+import type { SearchIntent } from '../contracts/search-intent.ts';
 import type {
   ShopAnalysis,
   ShopAnalysisField,
   SuggestedCategory,
   SuggestedTag,
-} from '../contracts/shop-analysis';
-import { SHOP_ANALYSIS_FIELDS } from '../contracts/shop-analysis';
+} from '../contracts/shop-analysis.ts';
+import { SHOP_ANALYSIS_FIELDS } from '../contracts/shop-analysis.ts';
 
 /**
  * Runtime validation of model output.
@@ -306,6 +307,66 @@ function readSuggestions(
     result.push({ slug, confidence });
   });
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Inbound request
+// ---------------------------------------------------------------------------
+
+/** Matches the `searches.query_text` CHECK constraint, so a stored row cannot fail. */
+export const MAX_SEARCH_QUERY_LENGTH = 500;
+
+/**
+ * Validates what a client sent, before anything else happens.
+ *
+ * Lives here rather than in the Edge Function so the rules are exercised by
+ * the Node test suite: an Edge Function needs Deno to run, and untested input
+ * validation on a public endpoint is exactly the wrong thing to leave
+ * unverified.
+ */
+export function validateSearchIntentRequest(input: unknown): ValidationResult<SearchIntentRequest> {
+  if (!isRecord(input)) {
+    return fail([`request: expected a JSON object, received ${describe(input)}`]);
+  }
+
+  const rawQuery = input.query;
+  if (typeof rawQuery !== 'string') {
+    return fail([`request.query: expected string, received ${describe(rawQuery)}`]);
+  }
+
+  const query = rawQuery.trim();
+  if (query.length === 0) {
+    return fail(['request.query: must not be empty']);
+  }
+  if (rawQuery.length > MAX_SEARCH_QUERY_LENGTH) {
+    return fail([`request.query: longer than ${MAX_SEARCH_QUERY_LENGTH} characters`]);
+  }
+
+  const issues: string[] = [];
+  const request: SearchIntentRequest = { query };
+
+  if (input.locale !== undefined && input.locale !== null) {
+    const locale = readString(input, 'locale', 'request.locale', issues);
+    if (!/^[a-z]{2}$/.test(locale)) {
+      issues.push('request.locale: expected a two-letter language code');
+    } else {
+      request.locale = locale;
+    }
+  }
+
+  if (input.shippingCountryCode !== undefined && input.shippingCountryCode !== null) {
+    const code = readString(input, 'shippingCountryCode', 'request.shippingCountryCode', issues);
+    if (!/^[A-Za-z]{2}$/.test(code)) {
+      issues.push('request.shippingCountryCode: expected a two-letter country code');
+    } else {
+      request.shippingCountryCode = code.toUpperCase();
+    }
+  }
+
+  if (issues.length > 0) {
+    return fail(issues);
+  }
+  return ok(request);
 }
 
 // ---------------------------------------------------------------------------

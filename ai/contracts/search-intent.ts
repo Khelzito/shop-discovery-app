@@ -7,7 +7,7 @@ import type {
   PopularityPreference,
   PricePositioning,
   Slug,
-} from './common';
+} from './common.ts';
 
 /**
  * Constraints the catalogue must satisfy. These become SQL.

@@ -9,6 +9,7 @@ import { EmptyState, Screen, SearchField, Section, Text } from '@/components/ui'
 import { matchesCategory } from '@/data/explore-categories';
 import { INSPIRATIONS } from '@/data/inspirations';
 import { MOCK_SHOPS } from '@/data/mock-shops';
+import { parseSearchIntent } from '@/lib/api/search-intent';
 import { countryLabel } from '@/lib/format';
 import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
@@ -48,6 +49,31 @@ export default function ExploreScreen() {
 
   const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
 
+  /**
+   * Submitting the query exercises the ai-search-intent Edge Function.
+   *
+   * The parsed intent is not wired into results yet — ranking is a later
+   * phase. It is logged in development only, so the spine is observable
+   * without putting anything in front of a user. The on-screen list keeps
+   * using the local filter above, unchanged.
+   */
+  const submitSearch = async () => {
+    const submitted = query.trim();
+    if (submitted.length === 0) {
+      return;
+    }
+    const outcome = await parseSearchIntent(submitted);
+    if (!__DEV__) {
+      return;
+    }
+    if (outcome.ok) {
+      console.log('[search-intent]', JSON.stringify(outcome.intent, null, 2));
+      console.log('[search-intent] degraded:', outcome.degraded);
+    } else {
+      console.log('[search-intent] error:', outcome.error.code, outcome.error.message);
+    }
+  };
+
   const inspirationWidth = Math.round((width - layout.screenPadding * 2) * 0.74);
 
   return (
@@ -55,7 +81,14 @@ export default function ExploreScreen() {
       <Text variant="title">Explorer</Text>
 
       <View style={styles.controls}>
-        <SearchField value={query} onChangeText={setQuery} />
+        <SearchField
+          value={query}
+          onChangeText={setQuery}
+          returnKeyType="search"
+          onSubmitEditing={() => {
+            void submitSearch();
+          }}
+        />
         <CategoryFilter selected={category} onSelect={setCategory} />
       </View>
 

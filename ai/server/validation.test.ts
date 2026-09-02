@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { HelpSource } from '../contracts/help';
-import type { ModelMetadata } from '../contracts/model';
+import type { HelpSource } from '../contracts/help.ts';
+import type { ModelMetadata } from '../contracts/model.ts';
 import {
   validateEmbeddingResult,
   validateHelpAnswer,
   validateRerankResult,
   validateSearchIntent,
   validateShopAnalysis,
-} from './validation';
+} from './validation.ts';
 
 const MODEL: ModelMetadata = {
   provider: 'test',

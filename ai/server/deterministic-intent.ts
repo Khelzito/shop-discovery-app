@@ -1,8 +1,8 @@
-import type { AiResult } from '../contracts/model';
-import type { SearchIntentRequest } from '../contracts/endpoints';
-import { emptySearchIntent } from '../contracts/search-intent';
-import type { SearchIntent } from '../contracts/search-intent';
-import type { AiRequestOptions, SearchIntentProvider } from './providers';
+import type { AiResult } from '../contracts/model.ts';
+import type { SearchIntentRequest } from '../contracts/endpoints.ts';
+import { emptySearchIntent } from '../contracts/search-intent.ts';
+import type { SearchIntent } from '../contracts/search-intent.ts';
+import type { AiRequestOptions, SearchIntentProvider } from './providers.ts';
 
 /**
  * Vocabulary the parser matches against, supplied by the caller.
@@ -117,7 +117,10 @@ export class DeterministicSearchIntentProvider implements SearchIntentProvider {
 
     // Confidence reflects how much was actually recognised, and stays low:
     // this tier is a floor, and a caller may reasonably escalate to a model.
-    intent.confidence = matched === 0 ? 0.1 : Math.min(0.6, 0.2 + matched * 0.1);
+    // Rounded: 0.2 + 3 * 0.1 is 0.30000000000000004 in binary floating point,
+    // and this value is persisted into searches.parsed_intent.
+    const raw = matched === 0 ? 0.1 : Math.min(0.6, 0.2 + matched * 0.1);
+    intent.confidence = Math.round(raw * 100) / 100;
 
     return intent;
   }

@@ -1,25 +1,25 @@
-import type { EmbeddingInput, EmbeddingResult, EmbeddingSourceKind } from '../contracts/embedding';
-import type { SearchIntentRequest } from '../contracts/endpoints';
-import type { HelpAnswer, HelpContext, HelpQuery, HelpSource } from '../contracts/help';
-import type { AiOutcome, AiResult } from '../contracts/model';
-import type { RerankCandidate, RerankResult } from '../contracts/rerank';
-import { emptySearchIntent } from '../contracts/search-intent';
-import type { SearchIntent } from '../contracts/search-intent';
-import type { ShopAnalysisRecord } from '../contracts/shop-analysis';
-import { AiError, AiUnavailableError, AiValidationError } from './errors';
+import type { EmbeddingInput, EmbeddingResult, EmbeddingSourceKind } from '../contracts/embedding.ts';
+import type { SearchIntentRequest } from '../contracts/endpoints.ts';
+import type { HelpAnswer, HelpContext, HelpQuery, HelpSource } from '../contracts/help.ts';
+import type { AiOutcome, AiResult } from '../contracts/model.ts';
+import type { RerankCandidate, RerankResult } from '../contracts/rerank.ts';
+import { emptySearchIntent } from '../contracts/search-intent.ts';
+import type { SearchIntent } from '../contracts/search-intent.ts';
+import type { ShopAnalysisRecord } from '../contracts/shop-analysis.ts';
+import { AiError, AiUnavailableError, AiValidationError } from './errors.ts';
 import type {
   EmbeddingProvider,
   HelpAnswerProvider,
   RerankProvider,
   SearchIntentProvider,
   ShopAnalysisProvider,
-} from './providers';
+} from './providers.ts';
 import {
   validateHelpAnswer,
   validateRerankResult,
   validateSearchIntent,
   validateShopAnalysis,
-} from './validation';
+} from './validation.ts';
 
 /**
  * Orchestration layer.

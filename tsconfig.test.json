@@ -1,5 +1,5 @@
 {
-  "//": "Standalone on purpose: the Expo base config targets a bundler, and the AI module is plain TypeScript that must also run under Node and later Deno.",
+  "//": "Standalone on purpose: the Expo base config targets a bundler, while ai/ is plain TypeScript that must also run under Deno. Deno requires explicit .ts specifiers, so rewriteRelativeImportExtensions turns them into .js on emit for Node.",
   "compilerOptions": {
     "strict": true,
     "noEmit": false,
@@ -7,11 +7,19 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "es2022",
-    "lib": ["es2022"],
-    "types": ["node"],
+    "lib": [
+      "es2022"
+    ],
+    "types": [
+      "node"
+    ],
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
-  "include": ["ai/**/*.ts"]
+  "include": [
+    "ai/**/*.ts"
+  ]
 }

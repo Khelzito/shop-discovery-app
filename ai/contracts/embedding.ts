@@ -1,4 +1,4 @@
-import type { ModelMetadata } from './model';
+import type { ModelMetadata } from './model.ts';
 
 /**
  * What can be embedded.

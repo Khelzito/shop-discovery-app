@@ -1,6 +1,6 @@
-import type { EmbeddingResult, EmbeddingSourceKind } from '../contracts/embedding';
-import type { SearchIntent } from '../contracts/search-intent';
-import type { ShopAnalysisRecord } from '../contracts/shop-analysis';
+import type { EmbeddingResult, EmbeddingSourceKind } from '../contracts/embedding.ts';
+import type { SearchIntent } from '../contracts/search-intent.ts';
+import type { ShopAnalysisRecord } from '../contracts/shop-analysis.ts';
 
 /**
  * Mappers from AI contracts to the shapes of the deployed tables.
@@ -103,6 +103,29 @@ export function toShopEmbeddingRow(
     source_hash: result.sourceHash,
     source_kind: sourceKind,
   };
+}
+
+/**
+ * Resolves category slugs to the ids `searches.category_ids` expects.
+ *
+ * An intent carries slugs because it is produced before any database lookup.
+ * A slug with no matching row is dropped rather than turned into a fabricated
+ * uuid: the column is a real foreign-key-shaped value and inventing one would
+ * corrupt every future analysis built on it.
+ */
+export function resolveCategoryIds(
+  slugs: readonly string[],
+  categories: readonly { id: string; slug: string }[]
+): string[] {
+  const bySlug = new Map(categories.map((category) => [category.slug, category.id]));
+  const resolved: string[] = [];
+  for (const slug of slugs) {
+    const id = bySlug.get(slug);
+    if (id !== undefined && !resolved.includes(id)) {
+      resolved.push(id);
+    }
+  }
+  return resolved;
 }
 
 /** A row for `searches`. */

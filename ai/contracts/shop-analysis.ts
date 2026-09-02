@@ -1,5 +1,5 @@
-import type { Audience, Confidence, PricePositioning, Slug } from './common';
-import type { ModelMetadata } from './model';
+import type { Audience, Confidence, PricePositioning, Slug } from './common.ts';
+import type { ModelMetadata } from './model.ts';
 
 /** A classification the model proposes. Never an accepted fact. */
 export type SuggestedCategory = {

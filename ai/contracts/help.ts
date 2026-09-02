@@ -1,5 +1,5 @@
-import type { Confidence, LanguageCode } from './common';
-import type { ModelMetadata } from './model';
+import type { Confidence, LanguageCode } from './common.ts';
+import type { ModelMetadata } from './model.ts';
 
 export type HelpQuery = {
   question: string;
