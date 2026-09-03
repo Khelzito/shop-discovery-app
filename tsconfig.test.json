@@ -22,9 +22,12 @@
   "include": [
     "ai/**/*.ts",
     "data/shops/mapper.ts",
+    "data/shops/select.ts",
     "data/shops/home-sections.ts",
     "data/shops/mapper.test.ts",
     "data/search/intent-filters.ts",
+    "data/search/query.ts",
+    "data/search/query.test.ts",
     "data/search/rank.ts",
     "data/search/search.test.ts",
     "types/shop.ts",

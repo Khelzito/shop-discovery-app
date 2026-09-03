@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { SHOP_SELECT, shopSelect } from './select';
 import type { Shop } from '@/types/shop';
 import { toShops, type ShopRow } from './mapper';
 
@@ -15,45 +16,10 @@ import { toShops, type ShopRow } from './mapper';
  * shops through that policy, and a discovery surface must never show them.
  */
 
-/**
- * Selected explicitly rather than with `*`.
- *
- * Beyond avoiding useless bytes, this is the list a reviewer can check against
- * the client model: adding an internal column here would be visible in the
- * diff instead of arriving silently with a schema change.
- */
-export const SHOP_SELECT = `
-  id,
-  slug,
-  name,
-  short_description,
-  website_url,
-  country_code,
-  city,
-  price_level,
-  audience,
-  published_at,
-  shop_images(external_url, storage_path, image_type, position, alt_text),
-  shop_categories(is_primary, categories(slug, name)),
-  shop_tags(tags(slug, name)),
-  shop_verifications(verification_type, verified_at)
-`;
-
-/**
- * PostgREST only allows filtering an embedded resource that appears in the
- * select, and only joins inner when asked (PGRST108 otherwise). Search needs
- * both variants, so the select is built rather than duplicated.
- */
-export function shopSelect(inner: { categories?: boolean; verifications?: boolean } = {}): string {
-  let select = SHOP_SELECT;
-  if (inner.categories) {
-    select = select.replace('shop_categories(', 'shop_categories!inner(');
-  }
-  if (inner.verifications) {
-    select = select.replace('shop_verifications(', 'shop_verifications!inner(');
-  }
-  return select;
-}
+// The select lives in ./select so it can be tested without this module, which
+// imports the Supabase client and therefore expo-sqlite and react-native.
+// Re-exported so callers keep one import site for shop reads.
+export { SHOP_SELECT, shopSelect };
 
 /** Shared so search and browse fail the same way. */
 export function shopClient() {
