@@ -21,6 +21,7 @@ import { createClient } from 'npm:@supabase/supabase-js@^2.109.0';
 import type { SearchIntentResponse } from '../../../ai/contracts/endpoints.ts';
 import type { AiErrorPayload } from '../../../ai/contracts/errors.ts';
 import type { AiCallTelemetry } from '../../../ai/contracts/model.ts';
+import { buildCategoryResolver } from '../../../ai/server/category-vocabulary.ts';
 import type { IntentVocabulary } from '../../../ai/server/deterministic-intent.ts';
 import { toAiErrorPayload } from '../../../ai/server/errors.ts';
 import { resolveCategoryIds, toSearchRow } from '../../../ai/server/persistence.ts';
@@ -101,12 +102,18 @@ function loadCategories(client: ReturnType<typeof createClient>): Promise<Catego
   return pending;
 }
 
-/** Category label plus slug, so "Prêt-à-porter" and "mode" both match. */
+/**
+ * One vocabulary for both tiers, built from the live taxonomy.
+ *
+ * The deterministic parser and the model adapter now resolve the same terms,
+ * so "baskets" reaches the sneakers category whichever tier answered.
+ */
 function toVocabulary(categories: readonly CategoryRow[]): IntentVocabulary {
+  const resolver = buildCategoryResolver(categories);
   return {
     categories: categories.map((category) => ({
       slug: category.slug,
-      terms: [category.slug, category.name],
+      terms: resolver.termsFor(category.slug),
     })),
     countries: COUNTRY_TERMS,
   };
@@ -238,6 +245,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const deterministic = createDeterministicProvider(toVocabulary(categories));
     const primary = createPrimarySearchProvider(searchProviderPlan, {
       allowedCategorySlugs: categories.map((category) => category.slug),
+      // Slug plus label, so a model answering "Sneakers" resolves instead of
+      // having its answer silently discarded.
+      categoryTaxonomy: categories.map((category) => ({
+        slug: category.slug,
+        name: category.name,
+      })),
     });
 
     const service = new SearchIntelligenceService(primary ?? deterministic, {
@@ -263,11 +276,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       console.warn('[ai-search-intent] search not recorded', { code: insertError.code });
     }
 
+    // Diagnostics. Derived vocabulary and counts only: no query text, no user
+    // id, no token, no provider payload.
     console.info('[ai-search-intent] ok', {
       latencyMs: Date.now() - startedAt,
       source: intent.source,
       degraded,
-      categoriesMatched: intent.hard.categorySlugs.length,
+      // 0 here means the categories query failed, which silently disables
+      // every category filter — the failure mode that caused this bug.
+      categoriesAvailable: categories.length,
+      categorySlugs: intent.hard.categorySlugs,
+      countryCodes: intent.hard.countryCodes,
+      audiences: intent.hard.audiences,
+      verifiedOnly: intent.hard.verifiedOnly,
       // Provider health only: no prompt, no completion, no query text.
       calls: telemetry.map((entry) => ({
         provider: entry.provider,

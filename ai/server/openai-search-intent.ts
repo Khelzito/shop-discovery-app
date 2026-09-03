@@ -1,4 +1,6 @@
 import { AUDIENCES, POPULARITY_PREFERENCES, PRICE_POSITIONINGS } from '../contracts/common.ts';
+import { buildCategoryResolver } from './category-vocabulary.ts';
+import type { CategoryResolver, CategoryTaxonomy } from './category-vocabulary.ts';
 import type { SearchIntentRequest } from '../contracts/endpoints.ts';
 import type { AiResult } from '../contracts/model.ts';
 import { emptySearchIntent } from '../contracts/search-intent.ts';
@@ -66,6 +68,12 @@ export type OpenAiSearchIntentOptions = {
   model: string;
   /** The only category slugs the model is allowed to produce. */
   allowedCategorySlugs: readonly string[];
+  /**
+   * Slug plus display name for each category. Supplying it lets a label or an
+   * alias be resolved instead of silently dropped; without it only exact slugs
+   * survive.
+   */
+  categoryTaxonomy?: CategoryTaxonomy;
   timeoutMs?: number;
   maxOutputTokens?: number;
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
@@ -99,12 +107,21 @@ function buildInstructions(allowedCategorySlugs: readonly string[]): string {
     'HARD vs SOFT — the critical distinction.',
     'hard = factual constraints the user explicitly stated. These REMOVE shops from results.',
     'soft = subjective judgements and style. These only influence ORDER.',
-    'When in doubt, put it in soft. A wrong hard filter hides good shops; a wrong soft',
-    'preference only mis-sorts them.',
+    'When in doubt about a SUBJECTIVE word, put it in soft: a wrong hard filter hides good',
+    'shops, while a wrong soft preference only mis-sorts them. This caution applies to taste',
+    'and style, never to a plainly stated product type, country or number — omitting one of',
+    'those is just as wrong, because the user asked for it explicitly.',
     '',
-    `CATEGORIES. Use only these slugs: ${categories}.`,
-    'Never invent a slug. If the query does not map cleanly to one, return an empty list and',
-    'keep the meaning in semanticQuery. "quiet luxury" is not a category.',
+    `CATEGORIES. Use only these exact slugs, lowercase, copied verbatim: ${categories}.`,
+    'Return the SLUG, never the display label: "sneakers", not "Sneakers".',
+    'A concrete product noun IS a factual constraint, not a judgement. If the query names a',
+    'product type that maps to one of these slugs, you MUST set it — "sneakers françaises"',
+    'means categorySlugs ["sneakers"] and "des bijoux" means ["bijoux"].',
+    'Map synonyms onto the slug too: baskets and chaussures mean sneakers, deco means',
+    'maison, casque means tech.',
+    'Only leave the list empty when nothing in the query names a product type at all.',
+    'Never invent a slug that is not in the list above. "quiet luxury" is a style, not a',
+    'category, so it sets none and stays in semanticQuery.',
     '',
     'COUNTRIES. countryCodes is where the brand or shop is FROM, and only when the wording',
     'says so: "marque française" -> FR, "marque japonaise" -> JP. A style reference is NOT an',
@@ -199,8 +216,17 @@ function buildSchema(allowedCategorySlugs: readonly string[]): Record<string, un
 
 export class OpenAiSearchIntentProvider implements SearchIntentProvider {
   readonly id = 'openai';
+  private readonly categories: CategoryResolver;
 
-  constructor(private readonly options: OpenAiSearchIntentOptions) {}
+  constructor(private readonly options: OpenAiSearchIntentOptions) {
+    // Falls back to slug-only entries when no taxonomy is supplied, so the
+    // resolver is never absent and behaviour degrades to the previous exact
+    // match rather than to a crash.
+    this.categories = buildCategoryResolver(
+      options.categoryTaxonomy ??
+        options.allowedCategorySlugs.map((slug) => ({ slug, name: slug }))
+    );
+  }
 
   async parseSearchIntent(
     request: SearchIntentRequest,
@@ -345,10 +371,17 @@ export class OpenAiSearchIntentProvider implements SearchIntentProvider {
     const hard = asRecord(body.hard);
     const soft = asRecord(body.soft);
 
-    const allowed = new Set(this.options.allowedCategorySlugs);
-    intent.hard.categorySlugs = stringArray(hard.categorySlugs).filter((slug) =>
-      allowed.has(slug)
-    );
+    // Resolve rather than exact-match. A label, plural or accent variant used
+    // to be dropped here without a trace, which removed a hard constraint the
+    // user had explicitly stated and quietly widened their results.
+    intent.hard.categorySlugs = this.categories.resolve(stringArray(hard.categorySlugs));
+
+    if (intent.hard.categorySlugs.length === 0) {
+      // Rescue: the query plainly names a product type that exists in the
+      // catalogue, so the constraint is factual and must not be lost because
+      // the model chose to omit it.
+      intent.hard.categorySlugs = this.categories.detect(request.query);
+    }
     intent.hard.audiences = stringArray(hard.audiences) as SearchIntent['hard']['audiences'];
     intent.hard.countryCodes = stringArray(hard.countryCodes);
     intent.hard.shippingCountryCodes = stringArray(hard.shippingCountryCodes);

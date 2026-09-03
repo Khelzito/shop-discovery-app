@@ -235,6 +235,33 @@ describe('malformed model output', () => {
     await assert.rejects(() => provider.parseSearchIntent({ query: 'bijoux' }), AiError);
   });
 
+  it('recovers the category from the query when the model sends a malformed one', async () => {
+    const body = envelope(
+      modelOutput({
+        hard: {
+          // Not an array: unusable, so the value itself is discarded.
+          categorySlugs: 'mode',
+          audiences: [],
+          countryCodes: [],
+          shippingCountryCodes: [],
+          priceMin: null,
+          priceMax: null,
+          currency: null,
+          verifiedOnly: false,
+        },
+      })
+    );
+    const result = await providerWith(recordingFetch(body).fetch).parseSearchIntent({
+      query: 'bijoux',
+    });
+
+    assert.deepEqual(
+      result.data.hard.categorySlugs,
+      ['bijoux'],
+      'the malformed "mode" is dropped and the stated product noun is used instead'
+    );
+  });
+
   it('coerces nonsense field types instead of trusting them', async () => {
     const body = envelope(
       modelOutput({
@@ -251,12 +278,18 @@ describe('malformed model output', () => {
         },
       })
     );
+    // A query with no product noun, so the category assertion isolates the
+    // coercion instead of also exercising the query-based rescue.
     const result = await providerWith(recordingFetch(body).fetch).parseSearchIntent({
-      query: 'bijoux',
+      query: 'quelque chose de sympa',
     });
 
     assert.equal(result.data.confidence, 0);
-    assert.deepEqual(result.data.hard.categorySlugs, []);
+    assert.deepEqual(
+      result.data.hard.categorySlugs,
+      [],
+      'a string where an array belongs must not be trusted'
+    );
     assert.deepEqual(result.data.hard.audiences, []);
     assert.equal(result.data.hard.priceMin, null);
     assert.equal(result.data.hard.currency, null);

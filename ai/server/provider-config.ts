@@ -5,6 +5,7 @@ import {
   DEFAULT_OPENAI_TIMEOUT_MS,
   OpenAiSearchIntentProvider,
 } from './openai-search-intent.ts';
+import type { CategoryTaxonomy } from './category-vocabulary.ts';
 import type { FetchLike } from './openai-search-intent.ts';
 import type { SearchIntentProvider } from './providers.ts';
 
@@ -88,7 +89,11 @@ export function planSearchProvider(env: EnvReader): SearchProviderPlan {
  */
 export function createPrimarySearchProvider(
   plan: SearchProviderPlan,
-  context: { allowedCategorySlugs: readonly string[]; fetchImpl?: FetchLike }
+  context: {
+    allowedCategorySlugs: readonly string[];
+    categoryTaxonomy?: CategoryTaxonomy;
+    fetchImpl?: FetchLike;
+  }
 ): SearchIntentProvider | null {
   if (plan.kind === 'deterministic') {
     return null;
@@ -98,6 +103,7 @@ export function createPrimarySearchProvider(
     apiKey: plan.apiKey,
     model: plan.model,
     allowedCategorySlugs: context.allowedCategorySlugs,
+    categoryTaxonomy: context.categoryTaxonomy,
     timeoutMs: plan.timeoutMs,
     maxOutputTokens: plan.maxOutputTokens,
     reasoningEffort: plan.reasoningEffort,
