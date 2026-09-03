@@ -1,7 +1,14 @@
 # AI layer
 
-The architecture of the AI brain, not the brain itself. No provider is called,
-no key exists, no embedding is generated, no dimension is chosen.
+OpenAI is the first concrete provider, behind the same `SearchIntentProvider`
+interface everything else depends on. It parses a natural-language query into a
+structured `SearchIntent` and nothing more: the intent does **not** retrieve or
+rank shops yet — that is the next phase. No embedding is generated and no
+dimension is chosen.
+
+The deterministic tier is not going anywhere. It runs when no key is
+configured, when OpenAI fails or times out, and when the model returns
+something that does not validate. Search degrades; it never stops working.
 
 ```
 ai/
@@ -107,6 +114,34 @@ silently hide good shops over an opinion, which is exactly what
 - A reranker returning a shop id it was not given is an error, not something to
   quietly filter out.
 
+## Providers
+
+| Operation | Provider today | Selected by |
+| --- | --- | --- |
+| search intent | `OpenAiSearchIntentProvider`, falling back to `DeterministicSearchIntentProvider` | `AI_SEARCH_PROVIDER`, `OPENAI_API_KEY` |
+| shop analysis | none yet | — |
+| embedding | none yet | — |
+| rerank | none yet | — |
+| help answer | none yet | — |
+
+`ai/server/openai-search-intent.ts` is the only file in the repository that
+knows OpenAI exists. A second vendor is a sibling file plus a config value, not
+a refactor: `SearchIntelligenceService` depends on the interface.
+
+Server-only configuration, all read inside the Edge Function:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | — | Secret. Absent means the deterministic tier. |
+| `AI_SEARCH_PROVIDER` | `openai` | `deterministic` disables the model entirely. |
+| `OPENAI_SEARCH_MODEL` | `gpt-5.6-sol` | Model id. |
+| `OPENAI_SEARCH_TIMEOUT_MS` | `6000` | Past this, the deterministic tier is better UX. |
+| `OPENAI_MAX_OUTPUT_TOKENS` | `2000` | Includes reasoning tokens, so not the size of the JSON. |
+| `OPENAI_SEARCH_REASONING_EFFORT` | `low` | Extraction, not deep reasoning. |
+
+None of these is an `EXPO_PUBLIC_` variable, and none can be: the Expo bundle
+cannot resolve `ai/server` at all.
+
 ## Runtime validation
 
 TypeScript disappears at build time, so every structured response is validated
@@ -132,4 +167,17 @@ npm test
 ```
 
 Compiles `ai/` with the existing TypeScript compiler and runs Node's built-in
-test runner. No test framework was added.
+test runner. No test framework was added. **No test makes a paid API call** —
+the provider adapter is exercised through an injected `fetch`.
+
+Quality of the real extraction is a separate, opt-in script that costs money
+and refuses to run without two explicit opt-ins:
+
+```sh
+OPENAI_API_KEY=... node scripts/evaluate-search-intent.mjs --confirm-paid
+```
+
+It runs `ai/server/evaluation-set.ts` — 32 queries covering French, English,
+mixed vocabulary, prices, origin-versus-shipping, style-versus-category,
+typos and prompt-injection attempts — and reports which ones violated an
+invariant.

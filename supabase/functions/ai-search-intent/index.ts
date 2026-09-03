@@ -4,9 +4,14 @@
 // logic of its own: it is transport, authentication and persistence around
 // SearchIntelligenceService, which is shared with the Node test suite.
 //
-// No paid provider is involved. The deterministic tier costs nothing, needs no
-// key, and is the floor docs/MASTER_SPEC.md §8 requires so that search keeps
-// working when a model is unavailable.
+// The provider is chosen from server-only environment variables. With
+// OPENAI_API_KEY set it uses OpenAI; without it, or when OpenAI fails, times
+// out or answers with something unusable, it falls back to the deterministic
+// tier. That floor is what docs/MASTER_SPEC.md §8 requires: an AI outage must
+// degrade search, never take it down.
+//
+// The API key is read here and passed only to the provider adapter. It is
+// never logged, never returned, and unreachable from the Expo bundle.
 //
 // Deno runtime. Relative imports carry explicit .ts extensions because Deno
 // requires them; the Node build rewrites them to .js on emit.
@@ -15,10 +20,16 @@ import { createClient } from 'npm:@supabase/supabase-js@^2.109.0';
 
 import type { SearchIntentResponse } from '../../../ai/contracts/endpoints.ts';
 import type { AiErrorPayload } from '../../../ai/contracts/errors.ts';
-import { DeterministicSearchIntentProvider } from '../../../ai/server/deterministic-intent.ts';
+import type { AiCallTelemetry } from '../../../ai/contracts/model.ts';
 import type { IntentVocabulary } from '../../../ai/server/deterministic-intent.ts';
 import { toAiErrorPayload } from '../../../ai/server/errors.ts';
 import { resolveCategoryIds, toSearchRow } from '../../../ai/server/persistence.ts';
+import {
+  createDeterministicProvider,
+  createPrimarySearchProvider,
+  describePlan,
+  planSearchProvider,
+} from '../../../ai/server/provider-config.ts';
 import { SearchIntelligenceService } from '../../../ai/server/services.ts';
 import { validateSearchIntentRequest } from '../../../ai/server/validation.ts';
 
@@ -60,6 +71,11 @@ type CategoryRow = { id: string; slug: string; name: string };
  * rarely, and a cold start is the only cost.
  */
 let categoriesPromise: Promise<CategoryRow[]> | null = null;
+
+// Resolved once per isolate and logged once, so every request does not repeat
+// the same configuration line. The description is key-free by construction.
+const searchProviderPlan = planSearchProvider((name) => Deno.env.get(name));
+console.info('[ai-search-intent] provider plan', describePlan(searchProviderPlan));
 
 function loadCategories(client: ReturnType<typeof createClient>): Promise<CategoryRow[]> {
   const cached = categoriesPromise;
@@ -216,9 +232,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const service = new SearchIntelligenceService(
-      new DeterministicSearchIntentProvider(toVocabulary(categories))
-    );
+    // Telemetry carries no query text and no user id, only provider health.
+    const telemetry: AiCallTelemetry[] = [];
+
+    const deterministic = createDeterministicProvider(toVocabulary(categories));
+    const primary = createPrimarySearchProvider(searchProviderPlan, {
+      allowedCategorySlugs: categories.map((category) => category.slug),
+    });
+
+    const service = new SearchIntelligenceService(primary ?? deterministic, {
+      // With no real provider configured the deterministic tier IS the primary,
+      // so there is nothing to fall back to.
+      ...(primary ? { fallback: deterministic } : {}),
+      context: { recordTelemetry: (entry) => telemetry.push(entry) },
+    });
 
     const { intent, degraded } = await service.parse(validated.value);
 
@@ -241,6 +268,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       source: intent.source,
       degraded,
       categoriesMatched: intent.hard.categorySlugs.length,
+      // Provider health only: no prompt, no completion, no query text.
+      calls: telemetry.map((entry) => ({
+        provider: entry.provider,
+        model: entry.model,
+        outcome: entry.outcome,
+        latencyMs: entry.latencyMs,
+        inputTokens: entry.inputTokens,
+        outputTokens: entry.outputTokens,
+      })),
     });
 
     const body: SearchIntentResponse = { intent, degraded };
