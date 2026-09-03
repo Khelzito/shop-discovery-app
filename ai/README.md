@@ -85,6 +85,49 @@ fetching a user-supplied URL is SSRF by construction. **[ai/SECURITY.md](./SECUR
 lists what must be implemented before it is deployed**, and every item there is
 a release blocker.
 
+## What search does today
+
+```
+query -> ai-search-intent -> SearchIntent (validated)
+      -> intent.hard       -> SQL filters      -> eligible shops
+      -> deterministic ranking                 -> ordered results
+```
+
+**This is factual retrieval, not semantic search.** Hard constraints become SQL
+and decide which shops exist in the answer; ranking only orders what survived,
+with a fixed formula and no model in the loop. A query for "quiet luxury"
+matches nothing unless those words literally appear in a shop's public text —
+the token-overlap heuristic in `data/search/rank.ts` cannot relate "baskets" to
+"sneakers", and a test asserts exactly that so the limitation stays visible.
+
+Semantic retrieval over `shop_embeddings` is the next phase and replaces the
+heuristic; the contracts already carry `semanticQuery` for it.
+
+Two paths reach the catalogue, on purpose:
+
+| Action | Path | Cost |
+| --- | --- | --- |
+| Tapping a category chip | direct `categories` filter | free |
+| Submitting free text | `ai-search-intent` then retrieval | one model call |
+
+### Constraints deliberately not applied yet
+
+| Constraint | Why |
+| --- | --- |
+| shipping destination | No shop declares `shipping_country_codes`. |
+| independence | Not a hard field in the contract; it is a soft signal. |
+| popularity | `shop_views` and `outbound_clicks` are empty, so "lesser known" cannot be measured. |
+
+Numeric price bounds **are** applied, but null-tolerantly: a shop that declares
+no range is never excluded, because "no data" is not "too expensive". No seeded
+shop declares one, so today this excludes nothing. Euro amounts are **never**
+translated into `price_level` — a level-2 shop is not "under 150 €", and
+inventing that mapping would silently hide shops behind an arbitrary threshold.
+
+Audience widens rather than narrows: a menswear query keeps `unisex` and `all`
+shops and rewards an exact match in ranking instead, so being wrong costs a
+position rather than a result.
+
 ## The search pipeline this supports
 
 ```

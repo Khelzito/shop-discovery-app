@@ -22,7 +22,7 @@ import { toShops, type ShopRow } from './mapper';
  * the client model: adding an internal column here would be visible in the
  * diff instead of arriving silently with a schema change.
  */
-const SHOP_SELECT = `
+export const SHOP_SELECT = `
   id,
   slug,
   name,
@@ -31,12 +31,34 @@ const SHOP_SELECT = `
   country_code,
   city,
   price_level,
+  audience,
   published_at,
   shop_images(external_url, storage_path, image_type, position, alt_text),
   shop_categories(is_primary, categories(slug, name)),
   shop_tags(tags(slug, name)),
   shop_verifications(verification_type, verified_at)
 `;
+
+/**
+ * PostgREST only allows filtering an embedded resource that appears in the
+ * select, and only joins inner when asked (PGRST108 otherwise). Search needs
+ * both variants, so the select is built rather than duplicated.
+ */
+export function shopSelect(inner: { categories?: boolean; verifications?: boolean } = {}): string {
+  let select = SHOP_SELECT;
+  if (inner.categories) {
+    select = select.replace('shop_categories(', 'shop_categories!inner(');
+  }
+  if (inner.verifications) {
+    select = select.replace('shop_verifications(', 'shop_verifications!inner(');
+  }
+  return select;
+}
+
+/** Shared so search and browse fail the same way. */
+export function shopClient() {
+  return client();
+}
 
 /** Keeps a first page bounded while the catalogue is small. */
 export const DEFAULT_SHOP_LIMIT = 24;
@@ -91,9 +113,7 @@ export async function getPublishedShops(query: ShopQuery = {}): Promise<ShopPage
 
   // An inner join makes the category filter run in Postgres rather than in the
   // app, so a filtered page is still a full page.
-  const select = query.categorySlug
-    ? SHOP_SELECT.replace('shop_categories(', 'shop_categories!inner(')
-    : SHOP_SELECT;
+  const select = shopSelect({ categories: Boolean(query.categorySlug) });
 
   let request = client().from('shops').select(select).eq('status', 'published');
 

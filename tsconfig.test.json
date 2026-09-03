@@ -24,6 +24,9 @@
     "data/shops/mapper.ts",
     "data/shops/home-sections.ts",
     "data/shops/mapper.test.ts",
+    "data/search/intent-filters.ts",
+    "data/search/rank.ts",
+    "data/search/search.test.ts",
     "types/shop.ts",
     "lib/http-url.ts"
   ]

@@ -17,6 +17,7 @@ function row(overrides: Partial<ShopRow> = {}): ShopRow {
     country_code: 'FR',
     city: 'Roubaix',
     price_level: 2,
+    audience: 'unisex',
     published_at: '2026-09-01T10:00:00.000Z',
     shop_images: null,
     shop_categories: null,
@@ -282,6 +283,7 @@ describe('the client model exposes nothing internal', () => {
     assert.deepEqual(
       Object.keys(shop).sort(),
       [
+        'audience',
         'categories',
         'city',
         'countryCode',
@@ -317,6 +319,7 @@ describe('buildHomeSections', () => {
       countryCode: 'FR',
       city: null,
       priceLevel: null,
+      audience: null,
       categories: [{ slug: category, name: category, isPrimary: true }],
       primaryCategory: { slug: category, name: category, isPrimary: true },
       tags: [],

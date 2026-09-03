@@ -13,6 +13,10 @@
 /** 1 = accessible, 4 = luxury. Declared by the merchant. */
 export type PriceLevel = 1 | 2 | 3 | 4;
 
+/** Declared by the merchant, never inferred. `null` means not declared. */
+export const SHOP_AUDIENCES = ['women', 'men', 'kids', 'unisex', 'all'] as const;
+export type ShopAudience = (typeof SHOP_AUDIENCES)[number];
+
 export type ShopCategoryRef = {
   slug: string;
   name: string;
@@ -38,6 +42,8 @@ export type Shop = {
   countryCode: string | null;
   city: string | null;
   priceLevel: PriceLevel | null;
+  /** Who the shop says it is for. Used to order results, never to exclude. */
+  audience: ShopAudience | null;
   categories: ShopCategoryRef[];
   /** Convenience: the primary category, else the first, else null. */
   primaryCategory: ShopCategoryRef | null;

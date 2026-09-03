@@ -45,3 +45,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Credentials
+*.key
+*api*.txt

@@ -1,5 +1,6 @@
 import { isHttpUrl } from '../../lib/http-url';
-import type { PriceLevel, Shop, ShopCategoryRef, ShopImages } from '../../types/shop';
+import { SHOP_AUDIENCES } from '../../types/shop';
+import type { PriceLevel, Shop, ShopAudience, ShopCategoryRef, ShopImages } from '../../types/shop';
 
 /**
  * The single boundary between Supabase rows and the UI.
@@ -45,6 +46,7 @@ export type ShopRow = {
   country_code: string | null;
   city: string | null;
   price_level: number | null;
+  audience: string | null;
   published_at: string | null;
   shop_images: ShopImageRow[] | null;
   shop_categories: ShopCategoryRow[] | null;
@@ -66,6 +68,7 @@ export function toShop(row: ShopRow): Shop {
     countryCode: nonEmpty(row.country_code),
     city: nonEmpty(row.city),
     priceLevel: toPriceLevel(row.price_level),
+    audience: toAudience(row.audience),
     categories,
     primaryCategory: categories.find((category) => category.isPrimary) ?? categories[0] ?? null,
     tags: toTags(row.shop_tags),
@@ -151,6 +154,12 @@ function toTags(rows: ShopTagRow[] | null): string[] {
     names.push(tag.name);
   }
   return names.sort((a, b) => a.localeCompare(b));
+}
+
+function toAudience(value: string | null): ShopAudience | null {
+  return (SHOP_AUDIENCES as readonly string[]).includes(value ?? '')
+    ? (value as ShopAudience)
+    : null;
 }
 
 function toPriceLevel(value: number | null): PriceLevel | null {
