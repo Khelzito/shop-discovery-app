@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Animated, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
@@ -37,7 +37,7 @@ export function FavoriteButton({
   variant = 'overlay',
   style,
 }: FavoriteButtonProps) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   const springTo = (toValue: number) => {
     Animated.spring(scale, {

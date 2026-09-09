@@ -52,7 +52,7 @@ export function InspirationCard({ inspiration, width, onPress }: InspirationCard
 
 const styles = StyleSheet.create({
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.scrimStrong,
     borderRadius: radii.image,
   },

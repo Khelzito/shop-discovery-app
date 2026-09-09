@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radii, spacing } from '@/theme';
@@ -18,7 +18,7 @@ export type SkeletonProps = {
  * contrast: if the animation calls attention to itself, it is too strong.
  */
 export function Skeleton({ width = '100%', height = 16, radius = 'sm', ratio, style }: SkeletonProps) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     const loop = Animated.loop(

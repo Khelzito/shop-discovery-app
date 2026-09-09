@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   fallback: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceSecondary,

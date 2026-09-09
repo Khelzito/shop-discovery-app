@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import type { ComponentProps } from 'react';
-import type { StyleProp, TextStyle } from 'react-native';
+import type { ColorValue, StyleProp, TextStyle } from 'react-native';
 
 import { colors, layout } from '@/theme';
 
@@ -57,7 +57,7 @@ export type IconProps = {
   /** Token size name. Defaults to `md` (20). */
   size?: IconSize | number;
   /** Any color token value. Defaults to the primary icon color. */
-  color?: string;
+  color?: ColorValue;
   style?: StyleProp<TextStyle>;
 };
 
