@@ -17,17 +17,29 @@ export class AiError extends Error {
   readonly retryable: boolean;
   /** Which provider failed. Logged, never returned to a client. */
   readonly provider: string | undefined;
+  /**
+   * The provider's HTTP status, when the failure was an HTTP response.
+   *
+   * Undefined for a transport failure, and that difference is the point: it is
+   * what separates "the provider refused us" from "we never reached it". The
+   * class alone cannot tell those apart, and a caller that only logs the class
+   * cannot diagnose either.
+   *
+   * Logged, never returned to a client.
+   */
+  readonly status: number | undefined;
 
   constructor(
     code: AiErrorCode,
     message: string,
-    options?: { provider?: string; cause?: unknown }
+    options?: { provider?: string; cause?: unknown; status?: number }
   ) {
     super(message, options?.cause === undefined ? undefined : { cause: options.cause });
     this.name = new.target.name;
     this.code = code;
     this.retryable = isRetryableAiErrorCode(code);
     this.provider = options?.provider;
+    this.status = options?.status;
   }
 
   /** The only representation that may leave the server. */
@@ -47,7 +59,10 @@ export class AiValidationError extends AiError {
 }
 
 export class AiProviderError extends AiError {
-  constructor(message: string, options?: { provider?: string; cause?: unknown }) {
+  constructor(
+    message: string,
+    options?: { provider?: string; cause?: unknown; status?: number }
+  ) {
     super('ai_provider_error', message, options);
   }
 }
@@ -58,7 +73,12 @@ export class AiRateLimitError extends AiError {
 
   constructor(
     message: string,
-    options?: { provider?: string; cause?: unknown; retryAfterSeconds?: number }
+    options?: {
+      provider?: string;
+      cause?: unknown;
+      retryAfterSeconds?: number;
+      status?: number;
+    }
   ) {
     super('ai_rate_limited', message, options);
     this.retryAfterSeconds = options?.retryAfterSeconds;

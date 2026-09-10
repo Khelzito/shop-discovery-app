@@ -31,22 +31,53 @@ export const RANKING_WEIGHTS = {
   verified: 15,
   /** Maximum contribution of the text overlap heuristic. */
   textOverlap: 30,
+  /**
+   * Maximum contribution of vector similarity.
+   *
+   * Deliberately below `categoryMatch + primaryCategoryBonus` (50): a shop
+   * that is merely ABOUT the right thing must not outrank one that factually
+   * IS the right thing. Semantic similarity widens what search can find; it
+   * does not get to overrule the catalogue.
+   */
+  semanticSimilarity: 45,
   /** Small tiebreaker so equally-scored results are not arbitrary. */
   freshness: 5,
 } as const;
 
 const FRESHNESS_WINDOW_DAYS = 60;
 
+/**
+ * Similarity below which a vector match earns nothing.
+ *
+ * Cosine similarities from a text embedding model do not spread over [0, 1] —
+ * unrelated French sentences still sit around 0.1–0.2 — so scoring raw
+ * similarity would hand every candidate a baseline bonus and turn the term
+ * into noise. Points are rescaled from this floor instead, reaching zero
+ * exactly at it.
+ *
+ * The value is a guess. It is meant to be measured against
+ * `search_interactions` once real queries exist, not defended.
+ */
+export const SEMANTIC_SIMILARITY_FLOOR = 0.15;
+
 export function rankShops(
   shops: readonly Shop[],
   intent: SearchIntent,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /**
+   * Cosine similarity per shop id, when the semantic arm ran.
+   *
+   * Optional and absent by default, so a search with no embedding — provider
+   * down, no vector stored, purely factual query — ranks exactly as it did
+   * before this term existed. That is the fallback, not a special case.
+   */
+  semantic?: ReadonlyMap<string, number>
 ): RankedShop[] {
   const queryTokens = tokenize(
     [intent.semanticQuery, intent.originalQuery].filter(Boolean).join(' ')
   );
 
-  const ranked = shops.map((shop) => score(shop, intent, queryTokens, now));
+  const ranked = shops.map((shop) => score(shop, intent, queryTokens, now, semantic));
 
   // Sort is total and stable: score, then recency, then id. Without the id the
   // order of equally-scored shops would depend on the database's row order.
@@ -67,7 +98,8 @@ function score(
   shop: Shop,
   intent: SearchIntent,
   queryTokens: readonly string[],
-  now: Date
+  now: Date,
+  semantic?: ReadonlyMap<string, number>
 ): RankedShop {
   let total = 0;
   const reasons: string[] = [];
@@ -120,6 +152,12 @@ function score(
     reasons.push(`text:${points}`);
   }
 
+  const semanticPoints = semanticBonus(shop, semantic);
+  if (semanticPoints > 0) {
+    total += semanticPoints;
+    reasons.push(`semantic:${semanticPoints}`);
+  }
+
   const freshness = freshnessBonus(shop, now);
   if (freshness > 0) {
     total += freshness;
@@ -127,6 +165,26 @@ function score(
   }
 
   return { shop, score: total, reasons };
+}
+
+/**
+ * Vector similarity, rescaled from the floor and clamped.
+ *
+ * A shop with no stored embedding simply scores nothing here — it is not
+ * penalised and not excluded, it just does not receive this bonus. That is
+ * what makes a partially-embedded catalogue usable rather than broken.
+ */
+export function semanticBonus(shop: Shop, semantic?: ReadonlyMap<string, number>): number {
+  const similarity = semantic?.get(shop.id);
+  if (similarity === undefined || !Number.isFinite(similarity)) {
+    return 0;
+  }
+  const clamped = Math.min(1, Math.max(0, similarity));
+  if (clamped <= SEMANTIC_SIMILARITY_FLOOR) {
+    return 0;
+  }
+  const normalized = (clamped - SEMANTIC_SIMILARITY_FLOOR) / (1 - SEMANTIC_SIMILARITY_FLOOR);
+  return Math.round(RANKING_WEIGHTS.semanticSimilarity * normalized);
 }
 
 /**

@@ -28,9 +28,17 @@
     "data/search/intent-filters.ts",
     "data/search/query.ts",
     "data/search/query.test.ts",
+    "data/search/merge.ts",
+    "data/search/hybrid.test.ts",
     "data/search/rank.ts",
     "data/search/search.test.ts",
     "types/shop.ts",
-    "lib/http-url.ts"
+    "lib/http-url.ts",
+    "scripts/backfill-args.ts",
+    "scripts/backfill-args.test.ts",
+    "scripts/postgrest.ts",
+    "scripts/postgrest.test.ts",
+    "scripts/backfill-plan.ts",
+    "scripts/backfill-plan.test.ts"
   ]
 }

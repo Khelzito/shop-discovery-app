@@ -9,7 +9,7 @@ import { EmptyState, Screen, SearchField, Section, Skeleton, Text } from '@/comp
 import { INSPIRATIONS } from '@/data/inspirations';
 import { searchShopsByIntent } from '@/data/search';
 import { getCategories, getPublishedShops } from '@/data/shops';
-import { parseSearchIntent } from '@/lib/api/search-intent';
+import { searchWithIntent } from '@/lib/api/search';
 import { useAsyncResource } from '@/lib/use-async-resource';
 import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
@@ -31,13 +31,16 @@ type SearchState =
  *
  *   * Browsing and category chips query the catalogue directly. Tapping a chip
  *     is a factual filter and must never cost an AI call.
- *   * Submitting free text calls ai-search-intent, then retrieves and ranks
- *     shops from that structured intent.
+ *   * Submitting free text calls ai-search, which parses the intent and, when
+ *     the query carries meaning no column holds, also returns semantically
+ *     close shops. Retrieval then merges both arms and ranks them.
  *
- * Retrieval is factual: hard constraints become SQL, and ranking only orders
- * what survived. This is not semantic search — "quiet luxury" matches nothing
- * unless those words appear in the public text of a shop. That arrives in the
- * next phase.
+ * Hard constraints stay gates on both arms: "quiet luxury" can now surface a
+ * shop whose text never contains those words, but "marque française" still
+ * cannot return a German one however close its vector is.
+ *
+ * If ai-search is unreachable the client falls back to ai-search-intent and
+ * the search runs exactly as it did in V1, without the semantic arm.
  */
 export default function ExploreScreen() {
   const { width } = useWindowDimensions();
@@ -85,7 +88,7 @@ export default function ExploreScreen() {
     setCategorySlug(null);
     setSearch({ status: 'loading', query: submitted });
 
-    const outcome = await parseSearchIntent(submitted);
+    const outcome = await searchWithIntent(submitted);
     if (!outcome.ok) {
       if (__DEV__) {
         console.log('[search] intent unavailable:', outcome.error.code);
@@ -95,11 +98,15 @@ export default function ExploreScreen() {
     }
 
     try {
-      const found = await searchShopsByIntent(outcome.intent);
+      const found = await searchShopsByIntent(outcome.intent, {
+        semanticMatches: outcome.semanticMatches,
+      });
       if (__DEV__) {
         console.log('[search]', {
           source: outcome.intent.source,
           degraded: outcome.degraded,
+          semantic: outcome.semantic,
+          hybrid: found.hybrid,
           applied: found.plan,
           results: found.results.map((result) => ({
             slug: result.shop.slug,

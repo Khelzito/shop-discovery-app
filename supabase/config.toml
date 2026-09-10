@@ -419,3 +419,10 @@ enabled = true
 # that could be forgotten. Anonymous search would need this set to false plus a
 # separate anonymous quota — see ai/SECURITY.md.
 verify_jwt = true
+
+[functions.ai-search]
+enabled = true
+# Same posture as ai-search-intent, and it matters more here: this function
+# holds a service_role client for the vector query. An unauthenticated caller
+# must never reach a handler that can read shop_embeddings, even indirectly.
+verify_jwt = true

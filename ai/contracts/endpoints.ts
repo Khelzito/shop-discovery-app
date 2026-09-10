@@ -27,6 +27,7 @@ export const AI_ENDPOINTS = {
   searchIntent: '/ai/search-intent',
   shopAnalysis: '/ai/shop-analysis',
   help: '/ai/help',
+  search: '/ai/search',
 } as const;
 
 /** POST /ai/search-intent */
@@ -44,6 +45,73 @@ export type SearchIntentResponse = {
    * difference; this is for observability.
    */
   degraded: boolean;
+};
+
+/**
+ * POST /ai/search — Search V2.
+ *
+ * A superset of /ai/search-intent: same request, and the response still
+ * carries `intent` and `degraded` so the factual path is unchanged. What it
+ * adds is the semantic arm's candidates.
+ *
+ * /ai/search-intent is NOT replaced. It stays deployed and untouched so an
+ * installed app keeps working, and so a failure confined to embedding or
+ * pgvector can be answered by falling back to it.
+ */
+export type SearchRequest = SearchIntentRequest;
+
+/**
+ * One semantically-close shop.
+ *
+ * An id and a number, deliberately. Vectors never cross this boundary: the
+ * app re-reads these shops through its own RLS-governed query, so the server
+ * cannot surface a shop the caller could not already see.
+ */
+export type SemanticMatch = {
+  shopId: string;
+  /** Cosine similarity in [0, 1]. */
+  similarity: number;
+};
+
+/**
+ * Why the semantic arm produced what it produced.
+ *
+ * Every value other than `ok` means the search still answered, from the
+ * factual arm alone. None of them is an error the user should ever see.
+ */
+export const SEMANTIC_ARM_STATUSES = [
+  /** Ran and returned candidates. */
+  'ok',
+  /** Ran and matched nothing above the threshold. */
+  'no_matches',
+  /** Not worth an embedding call: the query is fully expressed by its filters. */
+  'skipped_factual_query',
+  /** No embedding provider is configured on the server. */
+  'no_provider',
+  /** The provider failed, timed out or returned something unusable. */
+  'embedding_failed',
+  /** The vector query itself failed. */
+  'retrieval_failed',
+] as const;
+export type SemanticArmStatus = (typeof SEMANTIC_ARM_STATUSES)[number];
+
+export type SearchResponse = {
+  intent: SearchIntent;
+  /** True when the intent came from the deterministic tier. */
+  degraded: boolean;
+  /** Empty whenever `semantic.status` is not `ok`. */
+  semanticMatches: SemanticMatch[];
+  /**
+   * Minimal diagnostics. Carries no vector, no secret, no SQL and no internal
+   * error text — only what is needed to answer "did the semantic arm run, and
+   * against which model".
+   */
+  semantic: {
+    status: SemanticArmStatus;
+    /** The embedding model, so a stale-vector mismatch is diagnosable. */
+    model: string | null;
+    matchCount: number;
+  };
 };
 
 /**
