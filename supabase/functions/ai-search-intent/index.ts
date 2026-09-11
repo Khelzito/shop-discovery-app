@@ -270,11 +270,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       resultsCount: null,
     });
 
-    const { error: insertError } = await supabase.from('searches').insert(row);
+    const { data: recordedSearch, error: insertError } = await supabase
+      .from('searches')
+      .insert(row)
+      .select('id')
+      .maybeSingle();
     if (insertError) {
       // Analytics must never break the answer the user is waiting for.
       console.warn('[ai-search-intent] search not recorded', { code: insertError.code });
     }
+    const searchId = typeof recordedSearch?.id === 'string' ? recordedSearch.id : null;
 
     // Diagnostics. Derived vocabulary and counts only: no query text, no user
     // id, no token, no provider payload.
@@ -300,7 +305,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       })),
     });
 
-    const body: SearchIntentResponse = { intent, degraded };
+    const body: SearchIntentResponse = { intent, degraded, searchId };
     return json({ ok: true, data: body }, 200);
   } catch (error) {
     // Nothing internal crosses the boundary: no stack, no filename, no SQL.

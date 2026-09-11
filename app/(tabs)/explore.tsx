@@ -9,9 +9,12 @@ import { EmptyState, Screen, SearchField, Section, Skeleton, Text } from '@/comp
 import { INSPIRATIONS } from '@/data/inspirations';
 import { searchShopsByIntent } from '@/data/search';
 import { getCategories, getPublishedShops } from '@/data/shops';
+import { recordSearchInteraction } from '@/lib/api/discovery';
 import { searchWithIntent } from '@/lib/api/search';
 import { useAsyncResource } from '@/lib/use-async-resource';
+import { useAuth } from '@/state/auth';
 import { useFavorites } from '@/state/favorites';
+import { usePreferences } from '@/state/preferences';
 import { layout, spacing } from '@/theme';
 import type { Shop } from '@/types/shop';
 
@@ -21,7 +24,7 @@ const BROWSE_LIMIT = 40;
 type SearchState =
   | { status: 'idle' }
   | { status: 'loading'; query: string }
-  | { status: 'ready'; query: string; shops: Shop[]; degraded: boolean }
+  | { status: 'ready'; query: string; shops: Shop[]; degraded: boolean; searchId: string | null }
   | { status: 'error'; query: string };
 
 /**
@@ -47,7 +50,9 @@ export default function ExploreScreen() {
   const [query, setQuery] = useState('');
   const [categorySlug, setCategorySlug] = useState<string | null>(null);
   const [search, setSearch] = useState<SearchState>({ status: 'idle' });
+  const { session } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { deliveryCountry, hydrated: preferencesHydrated } = usePreferences();
 
   const loadBrowse = useCallback(
     () => getPublishedShops({ limit: BROWSE_LIMIT, categorySlug }),
@@ -67,7 +72,20 @@ export default function ExploreScreen() {
     setSearch({ status: 'idle' });
   };
 
-  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
+  const openShop = (shop: Shop) => {
+    const position = listShops.findIndex((candidate) => candidate.id === shop.id);
+    const searchId = search.status === 'ready' ? search.searchId : null;
+    if (searching) void recordSearchInteraction(searchId, shop.id, 'shop_open', position);
+    router.push({
+      pathname: '/shop/[id]',
+      params: {
+        id: shop.id,
+        source: searching ? 'search' : 'explore',
+        ...(searchId ? { searchId } : {}),
+        ...(position >= 0 ? { position: String(position) } : {}),
+      },
+    });
+  };
 
   /**
    * The full path: query -> intent -> factual retrieval -> ranking.
@@ -88,7 +106,10 @@ export default function ExploreScreen() {
     setCategorySlug(null);
     setSearch({ status: 'loading', query: submitted });
 
-    const outcome = await searchWithIntent(submitted);
+    const outcome = await searchWithIntent(
+      submitted,
+      session && preferencesHydrated ? { shippingCountryCode: deliveryCountry } : {}
+    );
     if (!outcome.ok) {
       if (__DEV__) {
         console.log('[search] intent unavailable:', outcome.error.code);
@@ -120,6 +141,7 @@ export default function ExploreScreen() {
         query: submitted,
         shops: found.results.map((result) => result.shop),
         degraded: outcome.degraded,
+        searchId: outcome.searchId,
       });
     } catch {
       setSearch({ status: 'error', query: submitted });
@@ -194,12 +216,19 @@ export default function ExploreScreen() {
 
           {!listLoading && !listError && listShops.length > 0 ? (
             <View style={styles.list}>
-              {listShops.map((shop) => (
+              {listShops.map((shop, index) => (
                 <ShopRow
                   key={shop.id}
                   shop={shop}
                   favorite={isFavorite(shop.id)}
-                  onToggleFavorite={toggleFavorite}
+                  onToggleFavorite={(shopId) => {
+                    const wasFavorite = isFavorite(shopId);
+                    toggleFavorite(shopId);
+                    if (searching && !wasFavorite) {
+                      const searchId = search.status === 'ready' ? search.searchId : null;
+                      void recordSearchInteraction(searchId, shopId, 'favorite', index);
+                    }
+                  }}
                   onPress={openShop}
                 />
               ))}

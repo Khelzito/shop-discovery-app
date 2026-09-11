@@ -41,6 +41,7 @@
     "scripts/backfill-plan.ts",
     "scripts/backfill-plan.test.ts",
     "lib/merchant/**/*.ts",
+    "lib/discovery/**/*.ts",
     "supabase/migration-contracts.test.ts"
   ]
 }

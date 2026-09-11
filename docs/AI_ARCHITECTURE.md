@@ -90,3 +90,13 @@ Future hybrid model:
 1. Search verified/internal catalogue first.
 2. If insufficient, optionally search external sources.
 3. Clearly label external shops as not verified by the platform.
+
+## Discovery ranking is not an LLM
+
+Prompt 18 keeps Home personalization deterministic and database-driven. The
+model is not asked to decide what a user should see. Explicit preferences and
+first-party interaction signals feed a bounded SQL ranker, with exposure
+penalties and category diversity so popularity does not become the only path
+to visibility. AI remains responsible for understanding natural-language
+search; the database remains responsible for recommendation eligibility and
+ordering.

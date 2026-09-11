@@ -2,10 +2,9 @@
  * Interest vocabulary for the Preferences screen.
  *
  * The catalogue's real categories now come from the `categories` table via the
- * shop repository, and Explorer reads them from there. This static list
- * survives only because preferences are still local and unpersisted; the slugs
- * match the seeded rows, so moving this screen to the database later changes
- * where the list comes from, not what it means.
+ * shop repository, and Explorer reads them from there. This compact static list
+ * defines the preference choices shown in the UI; the slugs intentionally match
+ * seeded category rows, and signed-in selections are persisted by slug lookup.
  */
 export type InterestOption = {
   id: string;

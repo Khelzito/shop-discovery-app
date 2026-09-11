@@ -213,3 +213,20 @@ Deliberate deviations from the outline above:
 - **`shop_embeddings` and `help_article_embeddings` use an unconstrained
   `vector`** because no embedding model has been chosen. They cannot be
   indexed until the dimension is fixed. See the migration header.
+
+### Prompt 18 — discovery intelligence
+
+`home_impressions` records only signed-in account, shop, Home section and time.
+It is append-only from the client, unreadable by clients, and exists to reduce
+repetition and measure exposure without storing IP, device fingerprint or
+precise location.
+
+`home_discovery(limit)` is a bounded `SECURITY DEFINER` read model. It returns
+only section, shop id and position. Ranking combines explicit category
+interests, recent first-party behaviour, favorites, preferred delivery
+country, profile quality, freshness, engagement and an exposure penalty.
+Clients then re-read those shop ids through the normal published-shop RLS.
+
+Favorites and explicit preferences are persisted under the existing own-row
+RLS policies. Search interactions are also restricted so a user can only bind
+an interaction to one of their own search rows.

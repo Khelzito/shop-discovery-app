@@ -25,6 +25,7 @@ export type SearchOutcome =
       ok: true;
       intent: SearchIntent;
       degraded: boolean;
+      searchId: string | null;
       semanticMatches: SemanticMatch[];
       /** Diagnostics for __DEV__ logging. Never rendered. */
       semantic: SearchResponse['semantic'];
@@ -45,12 +46,14 @@ const UNAVAILABLE: AiErrorPayload = {
 function withoutSemantics(
   intent: SearchIntent,
   degraded: boolean,
-  status: SearchResponse['semantic']['status']
+  status: SearchResponse['semantic']['status'],
+  searchId: string | null
 ): SearchOutcome {
   return {
     ok: true,
     intent,
     degraded,
+    searchId,
     semanticMatches: [],
     semantic: { status, model: null, matchCount: 0 },
   };
@@ -85,7 +88,7 @@ export async function searchWithIntent(
     }
     const v1 = await parseSearchIntent(trimmed, options);
     return v1.ok
-      ? withoutSemantics(v1.intent, v1.degraded, 'retrieval_failed')
+      ? withoutSemantics(v1.intent, v1.degraded, 'retrieval_failed', v1.searchId)
       : { ok: false, error: v1.error };
   }
 
@@ -98,6 +101,7 @@ export async function searchWithIntent(
     ok: true,
     intent: body.intent,
     degraded: body.degraded,
+    searchId: typeof body.searchId === 'string' ? body.searchId : null,
     // Narrowed rather than trusted: this crossed a network boundary.
     semanticMatches: Array.isArray(body.semanticMatches)
       ? body.semanticMatches.filter(isMatch)

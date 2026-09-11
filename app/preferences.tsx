@@ -7,15 +7,17 @@ import { countryLabel } from '@/lib/format';
 import { usePreferences } from '@/state/preferences';
 import { layout, spacing } from '@/theme';
 
+const DELIVERY_COUNTRIES = ['FR', 'BE', 'DE', 'ES', 'IT', 'NL', 'PT'] as const;
+
 /**
  * Préférences — what the user is into, and where they want to be delivered.
  *
  * Interests reuse the Explorer categories rather than a parallel list, so a
- * preference and a browse filter mean the same thing. Nothing is persisted
- * yet; see `state/preferences.tsx`.
+ * preference and a browse filter mean the same thing. Signed-in choices are
+ * persisted under the account and feed Home ranking.
  */
 export default function PreferencesScreen() {
-  const { isInterested, toggleInterest, deliveryCountry } = usePreferences();
+  const { isInterested, toggleInterest, deliveryCountry, setDeliveryCountry } = usePreferences();
 
   return (
     <Screen scroll>
@@ -44,7 +46,16 @@ export default function PreferencesScreen() {
         </Section>
 
         <Section title="Pays de livraison préféré">
-          <Text variant="body">{countryLabel(deliveryCountry)}</Text>
+          <View style={styles.chips}>
+            {DELIVERY_COUNTRIES.map((country) => (
+              <Chip
+                key={country}
+                label={countryLabel(country)}
+                selected={deliveryCountry === country}
+                onPress={() => setDeliveryCountry(country)}
+              />
+            ))}
+          </View>
         </Section>
       </View>
     </Screen>

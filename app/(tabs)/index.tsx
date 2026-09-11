@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { featuredCardWidth, standardCardWidth } from '@/components/shop/shop-card';
 import { ShopRail } from '@/components/shop/shop-rail';
 import { EmptyState, Screen, SearchField, Section, ShopCardSkeleton } from '@/components/ui';
 import { buildHomeSections, getPublishedShops } from '@/data/shops';
-import { useAsyncResource } from '@/lib/use-async-resource';
+import { getPersonalizedHome, homeIdsFromDiscovery, recordHomeImpressions } from '@/lib/api/discovery';
+import { useFocusResource } from '@/lib/use-focus-resource';
 import { useFavorites } from '@/state/favorites';
 import { layout, spacing } from '@/theme';
 import type { Shop } from '@/types/shop';
@@ -23,20 +24,29 @@ const HOME_SHOP_LIMIT = 24;
  * (docs/MASTER_SPEC.md §7). Content starts immediately under the search field
  * and photography carries the screen.
  *
- * How the three sections are filled is a documented placeholder living in
- * `buildHomeSections`, not personalisation. This screen only renders them.
+ * Ranking is server-side: explicit interests, first-party behaviour, quality,
+ * freshness and controlled exposure. If the Prompt 18 RPC is unavailable, the
+ * previous deterministic composition remains a safe fallback.
  */
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { isFavorite, toggleFavorite } = useFavorites();
 
-  const load = useCallback(() => getPublishedShops({ limit: HOME_SHOP_LIMIT }), []);
-  const shops = useAsyncResource(load);
+  const load = useCallback(async () => {
+    try {
+      return await getPersonalizedHome(6);
+    } catch {
+      const page = await getPublishedShops({ limit: HOME_SHOP_LIMIT });
+      return buildHomeSections(page.shops);
+    }
+  }, []);
+  const shops = useFocusResource(load);
+  const sections = shops.data ?? { forYou: [], hiddenGems: [], newest: [] };
 
-  const sections = useMemo(
-    () => buildHomeSections(shops.data?.shops ?? []),
-    [shops.data]
-  );
+  useEffect(() => {
+    if (shops.status !== 'ready' || !shops.data) return;
+    void recordHomeImpressions(homeIdsFromDiscovery(shops.data));
+  }, [shops.status, shops.data]);
 
   const cardWidths = useMemo(
     () => ({
@@ -47,7 +57,7 @@ export default function HomeScreen() {
   );
 
   const openSearch = () => router.push('/explore');
-  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
+  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id, source: 'home' } });
 
   return (
     <Screen scroll>
@@ -72,7 +82,7 @@ export default function HomeScreen() {
           />
         ) : null}
 
-        {shops.status === 'ready' && sections.newest.length === 0 ? (
+        {shops.status === 'ready' && sections.forYou.length + sections.hiddenGems.length + sections.newest.length === 0 ? (
           <EmptyState
             icon="search"
             title="Aucune boutique pour le moment"

@@ -34,7 +34,7 @@ export default function FavoritesScreen() {
   );
   const shops = useAsyncResource(load);
 
-  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id } });
+  const openShop = (shop: Shop) => router.push({ pathname: '/shop/[id]', params: { id: shop.id, source: 'favorites' } });
 
   const cardWidth = Math.floor((width - layout.screenPadding * 2 - COLUMN_GAP) / 2);
   const resolved = shops.data ?? [];

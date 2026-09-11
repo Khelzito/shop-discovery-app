@@ -16,12 +16,12 @@ import { supabase } from '@/lib/supabase';
 const FUNCTION_NAME = 'ai-search-intent';
 
 export type SearchIntentOutcome =
-  | { ok: true; intent: SearchIntent; degraded: boolean }
+  | { ok: true; intent: SearchIntent; degraded: boolean; searchId: string | null }
   | { ok: false; error: AiErrorPayload };
 
 /** Shape the Edge Function returns. Narrowed before anything is trusted. */
 type FunctionResponse =
-  | { ok: true; data: { intent: SearchIntent; degraded: boolean } }
+  | { ok: true; data: { intent: SearchIntent; degraded: boolean; searchId?: unknown } }
   | { ok: false; error: AiErrorPayload };
 
 const UNAVAILABLE: AiErrorPayload = {
@@ -68,5 +68,10 @@ export async function parseSearchIntent(
     return { ok: false, error: data.error };
   }
 
-  return { ok: true, intent: data.data.intent, degraded: data.data.degraded };
+  return {
+    ok: true,
+    intent: data.data.intent,
+    degraded: data.data.degraded,
+    searchId: typeof data.data.searchId === 'string' ? data.data.searchId : null,
+  };
 }

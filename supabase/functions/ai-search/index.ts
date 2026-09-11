@@ -385,10 +385,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       resultsCount: null,
     });
 
-    const { error: insertError } = await supabase.from('searches').insert(row);
+    const { data: recordedSearch, error: insertError } = await supabase
+      .from('searches')
+      .insert(row)
+      .select('id')
+      .maybeSingle();
     if (insertError) {
       console.warn('[ai-search] search not recorded', { code: insertError.code });
     }
+    const searchId = typeof recordedSearch?.id === 'string' ? recordedSearch.id : null;
 
     console.info('[ai-search] ok', {
       latencyMs: Date.now() - startedAt,
@@ -414,6 +419,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const body: SearchResponse = {
       intent,
       degraded,
+      searchId,
       semanticMatches: semantic.matches,
       semantic: {
         status: semantic.status,

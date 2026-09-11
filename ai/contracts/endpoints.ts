@@ -45,6 +45,8 @@ export type SearchIntentResponse = {
    * difference; this is for observability.
    */
   degraded: boolean;
+  /** Analytics row written for this query; null if recording failed. */
+  searchId: string | null;
 };
 
 /**
@@ -99,6 +101,8 @@ export type SearchResponse = {
   intent: SearchIntent;
   /** True when the intent came from the deterministic tier. */
   degraded: boolean;
+  /** Analytics row written for this query; null if recording failed. */
+  searchId: string | null;
   /** Empty whenever `semantic.status` is not `ok`. */
   semanticMatches: SemanticMatch[];
   /**

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import { getShopByIdOrSlug } from '@/data/shops';
 import { shopMetaLine } from '@/lib/format';
+import { recordOutboundClick, recordSearchInteraction, recordShopView, safeDiscoverySource } from '@/lib/api/discovery';
 import { openExternalUrl } from '@/lib/url';
 import { useAsyncResource } from '@/lib/use-async-resource';
 import { useFavorites } from '@/state/favorites';
@@ -39,14 +40,21 @@ const GALLERY_WIDTH_RATIO = 0.62;
  * Lives outside the `(tabs)` group, so the tab bar is naturally absent.
  */
 export default function ShopDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, source, searchId, position } = useLocalSearchParams<{ id: string; source?: string; searchId?: string; position?: string }>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const identifier = typeof id === 'string' ? id : '';
+  const discoverySource = safeDiscoverySource(source);
+  const searchPosition = typeof position === 'string' && /^\d+$/.test(position) ? Number(position) : null;
   const load = useCallback(() => getShopByIdOrSlug(identifier), [identifier]);
   const resource = useAsyncResource(load);
+
+  useEffect(() => {
+    if (resource.status !== 'ready' || !resource.data) return;
+    void recordShopView(resource.data.id, discoverySource);
+  }, [resource.status, resource.data, discoverySource]);
 
   if (resource.status === 'loading') {
     return <DetailSkeleton width={width} />;
@@ -137,6 +145,10 @@ export default function ShopDetailScreen() {
               fullWidth
               style={styles.cta}
               onPress={() => {
+                void recordOutboundClick(shop.id, discoverySource);
+                if (discoverySource === 'search') {
+                  void recordSearchInteraction(searchId, shop.id, 'outbound_click', searchPosition);
+                }
                 void openExternalUrl(websiteUrl);
               }}
             />
@@ -184,7 +196,13 @@ export default function ShopDetailScreen() {
         <IconButton icon="back" onPress={() => router.back()} accessibilityLabel="Retour" />
         <FavoriteButton
           active={isFavorite(shop.id)}
-          onPress={() => toggleFavorite(shop.id)}
+          onPress={() => {
+            const wasFavorite = isFavorite(shop.id);
+            toggleFavorite(shop.id);
+            if (!wasFavorite && discoverySource === 'search') {
+              void recordSearchInteraction(searchId, shop.id, 'favorite', searchPosition);
+            }
+          }}
           label={shop.name}
         />
       </View>
