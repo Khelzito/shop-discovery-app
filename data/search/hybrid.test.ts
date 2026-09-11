@@ -61,6 +61,7 @@ function shop(fixture: Fixture): Shop {
     tags: [],
     images: { cover: null, gallery: [] },
     verified: fixture.verified,
+    domainVerified: fixture.verified,
     publishedAt: new Date(NOW.getTime() - fixture.daysAgo * 86_400_000).toISOString(),
   };
 }

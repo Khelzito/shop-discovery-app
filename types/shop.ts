@@ -55,5 +55,11 @@ export type Shop = {
    * client can write this.
    */
   verified: boolean;
+  /**
+   * An approved, unexpired domain-control verification is visible. The only
+   * fact the public badge states — "Domaine vérifié" — never "safe",
+   * "trusted" or "certified".
+   */
+  domainVerified: boolean;
   publishedAt: string | null;
 };

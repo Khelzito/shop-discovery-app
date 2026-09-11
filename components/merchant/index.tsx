@@ -77,6 +77,62 @@ export function BackButton() {
 }
 
 // ---------------------------------------------------------------------------
+// Rows
+// ---------------------------------------------------------------------------
+
+/** A navigable line: a title, a quiet meta line, a status in words, a chevron. */
+export function StatusRow({
+  title,
+  meta,
+  status,
+  onPress,
+  separator = false,
+}: {
+  title: string;
+  meta?: string | null;
+  status?: string | null;
+  onPress: () => void;
+  separator?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={[title, status].filter(Boolean).join(', ')}
+      style={({ pressed }) => [styles.statusRow, separator && styles.rowSeparator, pressed && styles.rowPressed]}>
+      <View style={styles.statusText}>
+        <Text variant="body" numberOfLines={1}>
+          {title}
+        </Text>
+        {meta ? (
+          <Text variant="meta" tone="secondary" numberOfLines={1}>
+            {meta}
+          </Text>
+        ) : null}
+      </View>
+      {status ? (
+        <Text variant="meta" tone="secondary" numberOfLines={1} style={styles.statusLabel}>
+          {status}
+        </Text>
+      ) : null}
+      <Icon name="chevronRight" size="md" color={colors.textTertiary} />
+    </Pressable>
+  );
+}
+
+/** A label and its value, read-only. */
+export function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text variant="meta" tone="secondary">
+        {label}
+      </Text>
+      <Text variant="body">{value}</Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Numbered steps
 // ---------------------------------------------------------------------------
 
@@ -324,6 +380,31 @@ export function EditableList({
 const styles = StyleSheet.create({
   back: {
     marginBottom: spacing.lg,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: layout.minTouchTarget,
+    paddingVertical: spacing.md,
+  },
+  rowSeparator: {
+    borderBottomWidth: layout.hairline,
+    borderBottomColor: colors.border,
+  },
+  rowPressed: {
+    opacity: 0.6,
+  },
+  statusText: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  statusLabel: {
+    maxWidth: '45%',
+  },
+  infoRow: {
+    gap: spacing.xxs,
+    paddingVertical: spacing.sm,
   },
   steps: {
     gap: spacing.md,

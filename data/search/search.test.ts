@@ -72,6 +72,7 @@ function shop(fixture: Fixture): Shop {
     tags: fixture.tags ?? [],
     images: { cover: null, gallery: [] },
     verified: fixture.verified,
+    domainVerified: fixture.verified,
     publishedAt,
   };
 }

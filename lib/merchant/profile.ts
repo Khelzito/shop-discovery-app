@@ -176,6 +176,51 @@ export function profileDraftFromProposal(proposal: unknown, websiteUrl: string):
   };
 }
 
+/**
+ * The form for a request sent back with `needs_changes`: the merchant's own
+ * last profile over the stored proposal.
+ *
+ * The proposal still defines the suggestions — so origins stay meaningful — and
+ * the images and logo the site exposed: a value from the old profile that is
+ * not among them is dropped, exactly as validateMerchantProfile would. Without
+ * a readable merchant profile this is the proposal's form, as before.
+ */
+export function profileDraftFromSubmission(
+  submittedData: unknown,
+  websiteUrl: string,
+  fallbackProposal: unknown = null
+): MerchantProfileDraft {
+  const root = asRecord(submittedData);
+  const draft = profileDraftFromProposal(root?.[MERCHANT_PROPOSAL_KEY] ?? fallbackProposal, websiteUrl);
+  const profile = asRecord(root?.[MERCHANT_PROFILE_KEY]);
+  if (!profile || profile.profileVersion !== MERCHANT_PROFILE_VERSION) {
+    return draft;
+  }
+
+  const text = (value: unknown, max: number) => (typeof value === 'string' ? value.slice(0, max) : '');
+  const list = (value: unknown, maxItems: number) =>
+    Array.isArray(value) ? uniqueStrings(value.filter((item): item is string => typeof item === 'string')).slice(0, maxItems) : [];
+
+  const values: ProfileValues = {
+    name: text(profile.name, LIMITS.name),
+    shortDescription: text(profile.shortDescription, LIMITS.shortDescription),
+    primaryCategory: typeof profile.primaryCategory === 'string' && profile.primaryCategory.length > 0 ? profile.primaryCategory : null,
+    secondaryCategories: list(profile.secondaryCategories, LIMITS.secondaryCategories),
+    audience: list(profile.audience, AUDIENCES.length).filter((item): item is Audience => (AUDIENCES as readonly string[]).includes(item)),
+    pricePositioning: (KNOWN_PRICES as readonly unknown[]).includes(profile.pricePositioning)
+      ? (profile.pricePositioning as KnownPricePositioning)
+      : null,
+    styles: list(profile.styles, LIMITS.listItems),
+    values: list(profile.values, LIMITS.listItems),
+    productTypes: list(profile.productTypes, LIMITS.listItems),
+    tags: list(profile.tags, LIMITS.tags),
+    logoUrl: typeof profile.logoUrl === 'string' && profile.logoUrl === draft.initial.logoUrl ? profile.logoUrl : null,
+    imageUrls: list(profile.imageUrls, LIMITS.imageUrls).filter((url) => draft.availableImageUrls.includes(url)),
+  };
+
+  return { ...draft, values };
+}
+
 export function emptyValues(): ProfileValues {
   return {
     name: '',

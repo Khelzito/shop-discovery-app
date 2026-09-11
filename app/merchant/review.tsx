@@ -27,7 +27,7 @@ import { AUDIENCE_LABELS, ORIGIN_HINTS, PRICE_LABELS } from '@/lib/merchant/labe
 import {
   KNOWN_PRICES,
   originOf,
-  profileDraftFromProposal,
+  profileDraftFromSubmission,
   type MerchantProfileDraft,
   type MerchantTaxonomy,
   type ProfileErrors,
@@ -137,14 +137,15 @@ const MANUAL_MESSAGES: Record<ManualReason, string> = {
 
 function initialDraft(submission: MerchantSubmission, lastAnalysis: LastAnalysis | null): MerchantProfileDraft {
   // The stored proposal first. The in-memory analysis only when the proposal
-  // could not be stored for this very submission.
+  // could not be stored for this very submission. A request sent back with
+  // `needs_changes` reopens on the merchant's own last profile.
   const fallback =
     submission.proposal == null &&
     lastAnalysis?.submissionId === submission.id &&
     lastAnalysis.analysis !== null
       ? { observed: lastAnalysis.analysis.observed, inferred: lastAnalysis.analysis.inferred }
       : null;
-  return profileDraftFromProposal(submission.proposal ?? fallback, submission.websiteUrl);
+  return profileDraftFromSubmission(submission.submittedData, submission.websiteUrl, fallback);
 }
 
 function ReviewForm({
@@ -236,6 +237,9 @@ function ReviewForm({
           <Notice icon="shield">
             Ces informations sont une proposition et seront vérifiées avant publication.
           </Notice>
+          {submission.status === 'needs_changes' && submission.reviewNote ? (
+            <Notice>{`Modifications demandées : ${submission.reviewNote}`}</Notice>
+          ) : null}
           {reason ? <Notice>{MANUAL_MESSAGES[reason]}</Notice> : null}
         </View>
 

@@ -1,21 +1,26 @@
 import { router } from 'expo-router';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { StatusRow } from '@/components/merchant';
 import { Button, ImageFrame, ListRowGroup, Screen, Skeleton, Text } from '@/components/ui';
+import { getMyShops, getMySubmissions } from '@/lib/api/merchant';
+import { isAppModerator } from '@/lib/api/moderation';
+import { SHOP_STATUS_LABELS } from '@/lib/merchant/management';
+import { submissionStatusView, submissionTitle } from '@/lib/merchant/submissions';
+import { useFocusResource } from '@/lib/use-focus-resource';
 import { useAuth } from '@/state/auth';
 import { layout, spacing } from '@/theme';
 
 const AVATAR_SIZE = 72;
+const MAX_REQUESTS_SHOWN = 5;
 
 /**
  * Profil — the consumer's account, kept deliberately bare.
  *
- * Signed in: identity from the session, three quiet entries, sign out.
- * Signed out: a calm way in, nothing else. No statistics, no dashboard, no
- * settings surface — Shop Discovery is not a marketplace.
- *
- * The three entries and the merchant entry lead nowhere yet; their screens
- * arrive in later phases.
+ * Signed in: identity from the session, three quiet entries, sign out. A
+ * merchant also finds their shops and the state of their requests here, in
+ * words — no dashboard, no numbers. Signed out: a calm way in, nothing else.
  */
 export default function ProfileScreen() {
   const { status, user, signOut } = useAuth();
@@ -61,6 +66,8 @@ export default function ProfileScreen() {
             />
           </View>
 
+          <MerchantActivity />
+
           <Button
             variant="text"
             label="Se déconnecter"
@@ -105,6 +112,76 @@ export default function ProfileScreen() {
   );
 }
 
+/**
+ * The merchant's shops and requests, refreshed each time the profile is shown.
+ * Quiet by design: nothing while loading, nothing on failure, nothing when the
+ * user has no shop and no request.
+ */
+function MerchantActivity() {
+  const load = useCallback(async () => {
+    const [submissions, shops, moderator] = await Promise.all([getMySubmissions(), getMyShops(), isAppModerator()]);
+    return { submissions, shops, moderator };
+  }, []);
+  const resource = useFocusResource(load);
+
+  if (resource.status !== 'ready') {
+    return null;
+  }
+
+  const { shops, moderator } = resource.data;
+  const managed = new Set(shops.map((shop) => shop.shopId));
+  // An approved request is represented by its shop once the shop is listed.
+  const requests = resource.data.submissions
+    .filter((submission) => !(submission.status === 'approved' && submission.shopId !== null && managed.has(submission.shopId)))
+    .slice(0, MAX_REQUESTS_SHOWN);
+
+  return (
+    <>
+      {shops.length > 0 ? (
+        <View style={styles.section}>
+          <Text variant="sectionTitle">Mes boutiques</Text>
+          <View>
+            {shops.map((shop, index) => (
+              <StatusRow
+                key={shop.shopId}
+                title={shop.name}
+                meta={shop.host}
+                status={SHOP_STATUS_LABELS[shop.status] ?? null}
+                separator={index < shops.length - 1}
+                onPress={() => router.push({ pathname: '/merchant/shop/[shopId]', params: { shopId: shop.shopId } })}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {requests.length > 0 ? (
+        <View style={styles.section}>
+          <Text variant="sectionTitle">Mes demandes</Text>
+          <View>
+            {requests.map((request, index) => (
+              <StatusRow
+                key={request.id}
+                title={submissionTitle(request)}
+                meta={request.proposedName ? request.host : null}
+                status={submissionStatusView(request.status)?.label ?? null}
+                separator={index < requests.length - 1}
+                onPress={() => router.push({ pathname: '/merchant/submissions/[id]', params: { id: request.id } })}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {moderator ? (
+        <View style={styles.section}>
+          <ListRowGroup rows={[{ icon: 'shield', label: 'Modération', onPress: () => router.push('/admin/submissions') }]} />
+        </View>
+      ) : null}
+    </>
+  );
+}
+
 function IdentitySkeleton() {
   return (
     <View style={styles.identity}>
@@ -129,6 +206,10 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   entries: {
+    marginTop: layout.sectionGap,
+  },
+  section: {
+    gap: spacing.xs,
     marginTop: layout.sectionGap,
   },
   signOut: {

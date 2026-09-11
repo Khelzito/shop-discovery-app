@@ -42,7 +42,7 @@ export function ShopRow({ shop, favorite, onToggleFavorite, onPress, style }: Sh
           <Text variant="shopName" numberOfLines={1} style={styles.name}>
             {shop.name}
           </Text>
-          {shop.verified ? <VerifiedMark /> : null}
+          {shop.domainVerified ? <VerifiedMark /> : null}
         </View>
         <Text variant="meta" tone="secondary" numberOfLines={1}>
           {shopMetaLine(shop)}

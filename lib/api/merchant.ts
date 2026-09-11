@@ -13,7 +13,18 @@ import {
   type OpenClaim,
 } from '@/lib/merchant/claim';
 import type { MerchantSubmissionUpdate, MerchantTaxonomy } from '@/lib/merchant/profile';
+import type { ShopMemberRole } from '@/ai/contracts/merchant-trust';
+import { interpretClaimVerificationResponse, type ClaimCheckResult } from '@/lib/merchant/claim-verification';
+import {
+  manageShopResultOf,
+  toManagedShop,
+  toMemberRole,
+  type ManagedShop,
+  type ManageShopResult,
+  type UpdateManagedShopParams,
+} from '@/lib/merchant/management';
 import { submitOutcomeOf, type SubmitOutcome } from '@/lib/merchant/submit';
+import { toSubmissionSummaries, type MerchantSubmissionSummary } from '@/lib/merchant/submissions';
 import { hostOfUrl } from '@/lib/merchant/url';
 import { supabase } from '@/lib/supabase';
 
@@ -26,9 +37,11 @@ import { supabase } from '@/lib/supabase';
  * can be none — only the publishable key ships in the app.
  *
  * What this module can write: `merchant_submissions.submitted_data` and
- * `status` (to `submitted`), and a pending claim through request_shop_claim.
- * It cannot set a reviewer, a shop, a membership, a verification or a
- * publication — the grants do not allow it and no function here tries.
+ * `status` (to `submitted`), a pending claim through request_shop_claim, and
+ * the content of a shop the caller owns or administers through
+ * update_managed_shop. It can ASK verify-shop-claim to check a claim; only the
+ * database decides. It cannot set a reviewer, a membership, a verification or
+ * a publication — the grants do not allow it and no function here tries.
  */
 
 const ANALYSIS_FUNCTION = 'ai-shop-analysis';
@@ -124,6 +137,8 @@ export type MerchantSubmission = {
   submittedData: unknown;
   /** submitted_data.aiProposal, as stored. Read defensively by the form. */
   proposal: unknown;
+  /** The reviewer's note, meaningful while the request is `needs_changes`. */
+  reviewNote: string | null;
 };
 
 /** Editable by the merchant: the statuses the update policy lets them change. */
@@ -137,7 +152,7 @@ export function isEditableSubmission(submission: Pick<MerchantSubmission, 'statu
 export async function getMerchantSubmission(id: string): Promise<MerchantSubmission | null> {
   const { data, error } = await client()
     .from('merchant_submissions')
-    .select('id, website_url, status, submitted_data')
+    .select('id, website_url, status, submitted_data, review_note')
     .eq('id', id)
     .maybeSingle();
 
@@ -149,7 +164,7 @@ export async function getMerchantSubmission(id: string): Promise<MerchantSubmiss
     return null;
   }
 
-  const row = data as { id: string; website_url: string; status: string; submitted_data: unknown };
+  const row = data as { id: string; website_url: string; status: string; submitted_data: unknown; review_note: string | null };
   const submittedData = row.submitted_data;
   const proposal =
     typeof submittedData === 'object' && submittedData !== null && !Array.isArray(submittedData)
@@ -162,6 +177,7 @@ export async function getMerchantSubmission(id: string): Promise<MerchantSubmiss
     status: row.status,
     submittedData,
     proposal,
+    reviewNote: typeof row.review_note === 'string' && row.review_note.trim().length > 0 ? row.review_note.trim() : null,
   };
 }
 
@@ -335,4 +351,183 @@ export async function requestShopClaim(shopId: string): Promise<ClaimRequestOutc
   }
   const claim = readClaimToken(data);
   return claim ? { ok: true, claim } : { ok: false, failure: 'unknown' };
+}
+
+const CLAIM_FUNCTION = 'verify-shop-claim';
+
+/** Network budget (10 s) + database, with margin. */
+const CLAIM_TIMEOUT_MS = 30_000;
+
+/**
+ * Asks the server to look for the claim's meta tag on the shop's home page.
+ *
+ * Only the claim id is sent. The server reads the user from the token, fetches
+ * the page itself and lets the database compare the proof; a success is the
+ * database's answer, never the app's conclusion.
+ */
+export async function verifyShopClaim(claimId: string): Promise<ClaimCheckResult> {
+  if (!supabase) {
+    return interpretClaimVerificationResponse({ status: 503, body: null, retryAfter: null });
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    return interpretClaimVerificationResponse({ status: 401, body: null, retryAfter: null });
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke(CLAIM_FUNCTION, {
+      body: { claimId },
+      timeout: CLAIM_TIMEOUT_MS,
+    });
+
+    if (!error) {
+      return interpretClaimVerificationResponse({ status: 200, body: data, retryAfter: null });
+    }
+
+    if (error instanceof FunctionsHttpError) {
+      const response = error.context as Response;
+      const body: unknown = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      return interpretClaimVerificationResponse({
+        status: response.status,
+        body,
+        retryAfter: response.headers.get('retry-after'),
+      });
+    }
+
+    logFailure('verifyShopClaim', error.name);
+    return interpretClaimVerificationResponse({ status: null, body: null, retryAfter: null });
+  } catch (caught) {
+    logFailure('verifyShopClaim', caught instanceof Error ? caught.name : null);
+    return interpretClaimVerificationResponse({ status: null, body: null, retryAfter: null });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tracking requests and managing shops
+// ---------------------------------------------------------------------------
+
+const SUBMISSION_SUMMARY_SELECT =
+  'id, status, website_url, review_note, shop_id, updated_at, proposed_name:submitted_data->merchantProfile->>name';
+
+/** The caller's own requests, newest first. RLS hides everyone else's. */
+export async function getMySubmissions(): Promise<MerchantSubmissionSummary[]> {
+  const { data, error } = await client()
+    .from('merchant_submissions')
+    .select(SUBMISSION_SUMMARY_SELECT)
+    .order('updated_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    logFailure('getMySubmissions', error.code);
+    throw new MerchantApiError('getMySubmissions', error.code ?? null);
+  }
+  return toSubmissionSummaries((data ?? []) as unknown[]);
+}
+
+export async function getMySubmission(id: string): Promise<MerchantSubmissionSummary | null> {
+  const { data, error } = await client()
+    .from('merchant_submissions')
+    .select(SUBMISSION_SUMMARY_SELECT)
+    .eq('id', id)
+    .limit(1);
+
+  if (error) {
+    logFailure('getMySubmission', error.code);
+    throw new MerchantApiError('getMySubmission', error.code ?? null);
+  }
+  return toSubmissionSummaries((data ?? []) as unknown[])[0] ?? null;
+}
+
+export type MyShop = { shopId: string; role: ShopMemberRole; name: string; status: string; host: string | null };
+
+/** Shops the caller belongs to, from their own membership rows. */
+export async function getMyShops(): Promise<MyShop[]> {
+  const db = client();
+  const { data: sessionData } = await db.auth.getSession();
+  const userId = sessionData.session?.user.id;
+  if (!userId) {
+    return [];
+  }
+
+  const { data, error } = await db
+    .from('shop_members')
+    .select('shop_id, role, shops(id, name, status, website_url)')
+    .eq('user_id', userId)
+    .limit(20);
+
+  if (error) {
+    logFailure('getMyShops', error.code);
+    throw new MerchantApiError('getMyShops', error.code ?? null);
+  }
+
+  const shops: MyShop[] = [];
+  for (const raw of (data ?? []) as unknown as { shop_id: unknown; role: unknown; shops: unknown }[]) {
+    const role = toMemberRole(raw.role);
+    const shop = raw.shops as { id?: unknown; name?: unknown; status?: unknown; website_url?: unknown } | null;
+    if (!role || !shop || typeof shop.id !== 'string' || typeof shop.name !== 'string' || typeof shop.status !== 'string') {
+      continue;
+    }
+    shops.push({
+      shopId: shop.id,
+      role,
+      name: shop.name,
+      status: shop.status,
+      host: typeof shop.website_url === 'string' ? hostOfUrl(shop.website_url) : null,
+    });
+  }
+  return shops.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const MANAGED_SHOP_SELECT = `
+  id,
+  slug,
+  name,
+  status,
+  website_url,
+  short_description,
+  audience,
+  price_level,
+  published_at,
+  shop_categories(is_primary, categories(slug)),
+  shop_tags(tags(slug, kind)),
+  shop_images(id, external_url, image_type, position),
+  shop_verifications(verification_type)
+`;
+
+/**
+ * A shop the caller manages, with their role. Null when they are not a member:
+ * a published shop they merely can see is not theirs to manage.
+ */
+export async function getManagedShop(shopId: string): Promise<ManagedShop | null> {
+  const db = client();
+  const { data: sessionData } = await db.auth.getSession();
+  const userId = sessionData.session?.user.id;
+  if (!userId) {
+    return null;
+  }
+
+  const [membership, shop] = await Promise.all([
+    db.from('shop_members').select('role').eq('shop_id', shopId).eq('user_id', userId).maybeSingle(),
+    db.from('shops').select(MANAGED_SHOP_SELECT).eq('id', shopId).maybeSingle(),
+  ]);
+
+  const error = membership.error ?? shop.error;
+  if (error) {
+    logFailure('getManagedShop', error.code);
+    throw new MerchantApiError('getManagedShop', error.code ?? null);
+  }
+  return toManagedShop(shop.data, toMemberRole((membership.data as { role?: unknown } | null)?.role));
+}
+
+/** Content and classification, atomically, through update_managed_shop. */
+export async function updateManagedShop(params: UpdateManagedShopParams): Promise<ManageShopResult> {
+  const { data, error } = await client().rpc('update_managed_shop', params);
+  if (error) {
+    logFailure('updateManagedShop', error.code);
+  }
+  return manageShopResultOf({ data, error });
 }

@@ -2,14 +2,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 
+import { PUBLIC_VERIFICATION_LABELS } from '@/ai/contracts/merchant-trust';
 import { BackButton, MerchantAuthGate, Notice, NumberedSteps } from '@/components/merchant';
-import { Button, EmptyState, Screen, Text } from '@/components/ui';
+import { Button, EmptyState, Icon, Screen, Text } from '@/components/ui';
 import {
   getMyOpenClaim,
   getPublishedShopSummary,
   isMemberOfShop,
   requestShopClaim,
+  verifyShopClaim,
 } from '@/lib/api/merchant';
+import { retryHint } from '@/lib/merchant/analysis-response';
 import {
   CLAIM_MESSAGES,
   claimMetaTag,
@@ -17,7 +20,9 @@ import {
   type ClaimFailure,
   type ClaimToken,
 } from '@/lib/merchant/claim';
+import type { ClaimCheckResult } from '@/lib/merchant/claim-verification';
 import { uuidParam } from '@/lib/merchant/routes';
+import { singleFlight } from '@/lib/merchant/submit';
 import { hostOfUrl } from '@/lib/merchant/url';
 import { useAsyncResource } from '@/lib/use-async-resource';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -25,16 +30,20 @@ import { colors, layout, radii, spacing } from '@/theme';
 const STEPS = [
   'Générez votre balise',
   'Ajoutez-la dans la page d’accueil de votre site',
-  'Nous vérifierons sa présence avant de valider votre demande',
+  'Lancez la vérification depuis cette page',
 ] as const;
+
+/** A new tag is the way forward from these. */
+const NEEDS_NEW_TAG = new Set(['claim_expired', 'claim_closed', 'claim_not_found']);
 
 /**
  * Claim — prove a listed shop is yours.
  *
- * request_shop_claim opens a PENDING claim and returns a one-time token; it
- * never approves, verifies or creates a membership. Checking that the meta tag
- * is on the site is Prompt 17: this screen shows the token and the pending
- * state, and says plainly that the check is not automatic yet.
+ * request_shop_claim opens a PENDING claim and returns a one-time token. The
+ * merchant publishes it in a meta tag, then asks verify-shop-claim to look for
+ * it. The app never concludes anything itself: only the database's answer
+ * turns a claim into ownership, and what it certifies is control of the
+ * domain — nothing more.
  */
 export default function MerchantClaimScreen() {
   return (
@@ -104,8 +113,8 @@ function ClaimLoader() {
       shopName={data.shop.name}
       domain={hostOfUrl(data.shop.websiteUrl)}
       member={data.member}
+      openClaimId={data.openClaim ? data.openClaim.id : null}
       openClaimExpiresAt={data.openClaim ? data.openClaim.expiresAt : null}
-      hasOpenClaim={data.openClaim !== null}
     />
   );
 }
@@ -115,20 +124,26 @@ function ClaimContent({
   shopName,
   domain,
   member,
-  hasOpenClaim,
+  openClaimId,
   openClaimExpiresAt,
 }: {
   shopId: string;
   shopName: string;
   domain: string | null;
   member: boolean;
-  hasOpenClaim: boolean;
+  openClaimId: string | null;
   openClaimExpiresAt: string | null;
 }) {
   const [claim, setClaim] = useState<ClaimToken | null>(null);
   const [failure, setFailure] = useState<ClaimFailure | null>(member ? 'already_member' : null);
   const [requesting, setRequesting] = useState(false);
+  const [check, setCheck] = useState<ClaimCheckResult | null>(null);
+  const [checking, setChecking] = useState(false);
+  /** One check at a time: a double tap asks the server once. */
+  const [runCheck] = useState(() => singleFlight<ClaimCheckResult>());
   const busy = useRef(false);
+
+  const claimId = claim?.claimId ?? openClaimId;
 
   const generate = async () => {
     if (busy.current) {
@@ -137,6 +152,7 @@ function ClaimContent({
     busy.current = true;
     setRequesting(true);
     setFailure(null);
+    setCheck(null);
 
     const outcome = await requestShopClaim(shopId).catch(() => ({ ok: false, failure: 'unknown' }) as const);
 
@@ -149,9 +165,46 @@ function ClaimContent({
     }
   };
 
+  const verify = async () => {
+    if (!claimId) {
+      return;
+    }
+    const pending = runCheck(() => verifyShopClaim(claimId));
+    if (pending === null) {
+      return;
+    }
+    setChecking(true);
+    setCheck(null);
+    const result = await pending;
+    setChecking(false);
+    setCheck(result);
+  };
+
+  const manage = () => router.replace({ pathname: '/merchant/shop/[shopId]', params: { shopId } });
+
+  if (check?.kind === 'verified') {
+    return (
+      <Screen center>
+        <View style={styles.success}>
+          <View style={styles.check}>
+            <Icon name="check" size="lg" color={colors.icon} />
+          </View>
+          <Text variant="sectionTitle" align="center" accessibilityRole="header">
+            {PUBLIC_VERIFICATION_LABELS.domain}
+          </Text>
+          <Text variant="body" tone="secondary" align="center">
+            Vous gérez maintenant {shopName} sur Shop Discovery.
+          </Text>
+          <Button label="Gérer ma boutique" size="lg" fullWidth onPress={manage} style={styles.successAction} />
+        </View>
+      </Screen>
+    );
+  }
+
   const tag = claim ? claimMetaTag(claim.token) : null;
   const expiry = claim ? formatClaimDate(claim.expiresAt) : openClaimExpiresAt ? formatClaimDate(openClaimExpiresAt) : null;
   const blocked = failure === 'already_member' || failure === 'shop_already_claimed';
+  const checkFailure = check?.kind === 'failed' ? check : null;
 
   return (
     <Screen scroll>
@@ -172,23 +225,27 @@ function ClaimContent({
       {blocked ? (
         <View style={styles.section}>
           <Notice icon={failure === 'already_member' ? 'check' : 'info'}>{CLAIM_MESSAGES[failure]}</Notice>
-          <Button label="Retour au profil" size="lg" fullWidth onPress={() => router.dismissTo('/profile')} />
+          {failure === 'already_member' ? (
+            <Button label="Gérer ma boutique" size="lg" fullWidth onPress={manage} />
+          ) : (
+            <Button label="Retour au profil" size="lg" fullWidth onPress={() => router.dismissTo('/profile')} />
+          )}
         </View>
       ) : (
         <>
           <View style={styles.section}>
             <Text variant="body" tone="secondary">
-              Ajoutez cette balise dans la page d’accueil de votre site.
+              Ajoutez cette balise dans la page d’accueil de votre site, puis lancez la vérification.
             </Text>
             <NumberedSteps steps={STEPS} />
           </View>
 
-          {hasOpenClaim && !claim ? (
+          {openClaimId && !claim ? (
             <View style={styles.section}>
               <Notice>
                 {expiry
-                  ? `Une demande est déjà en cours jusqu’au ${expiry}. Générer une nouvelle balise remplace la précédente.`
-                  : 'Une demande est déjà en cours. Générer une nouvelle balise remplace la précédente.'}
+                  ? `Une demande est en cours jusqu’au ${expiry}. Si votre balise est déjà publiée, lancez la vérification. Générer une nouvelle balise remplace la précédente.`
+                  : 'Une demande est en cours. Si votre balise est déjà publiée, lancez la vérification. Générer une nouvelle balise remplace la précédente.'}
               </Notice>
             </View>
           ) : null}
@@ -214,9 +271,35 @@ function ClaimContent({
                 fullWidth
                 onPress={() => void Share.share({ message: tag })}
               />
-              <Notice>
-                La vérification automatique arrive bientôt. Votre demande reste en attente d’examen.
-              </Notice>
+            </View>
+          ) : null}
+
+          {claimId ? (
+            <View style={styles.section}>
+              <Button
+                label="Vérifier ma boutique"
+                size="lg"
+                fullWidth
+                loading={checking}
+                disabled={checking || requesting}
+                onPress={() => void verify()}
+              />
+              <Text variant="caption" tone="tertiary" align="center">
+                Nous vérifions uniquement la présence de la balise sur votre domaine.
+              </Text>
+              {checkFailure ? (
+                <View style={styles.checkFailure}>
+                  <Text variant="meta" tone="danger" accessibilityRole="alert">
+                    {[checkFailure.message, retryHint(checkFailure.retryAfterSeconds)].filter(Boolean).join(' ')}
+                  </Text>
+                  {checkFailure.reason === 'already_member' ? (
+                    <Button variant="text" label="Gérer ma boutique" onPress={manage} />
+                  ) : null}
+                  {checkFailure.reason === 'session_expired' ? (
+                    <Button variant="text" label="Se reconnecter" onPress={() => router.push('/sign-in')} />
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -227,14 +310,14 @@ function ClaimContent({
           ) : null}
 
           <Button
-            label={claim || hasOpenClaim ? 'Générer une nouvelle balise' : 'Générer ma balise'}
-            variant={claim ? 'text' : 'primary'}
+            label={claimId ? 'Générer une nouvelle balise' : 'Générer ma balise'}
+            variant={claimId ? 'text' : 'primary'}
             size="lg"
-            fullWidth={!claim}
+            fullWidth={!claimId}
             loading={requesting}
-            disabled={requesting}
+            disabled={requesting || checking}
             onPress={() => void generate()}
-            style={styles.generate}
+            style={[styles.generate, checkFailure && NEEDS_NEW_TAG.has(checkFailure.reason) ? styles.generateEmphasis : null]}
           />
         </>
       )}
@@ -259,11 +342,35 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
+  checkFailure: {
+    alignItems: 'flex-start',
+    gap: spacing.xxs,
+  },
   error: {
     marginTop: spacing.lg,
   },
   generate: {
     alignSelf: 'center',
+    marginTop: spacing.xxl,
+  },
+  generateEmphasis: {
+    marginTop: spacing.lg,
+  },
+  success: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  check: {
+    width: layout.controlHeight.lg,
+    height: layout.controlHeight.lg,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    marginBottom: spacing.md,
+  },
+  successAction: {
     marginTop: spacing.xxl,
   },
 });

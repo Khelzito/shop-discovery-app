@@ -11,7 +11,11 @@ export type VerifiedMarkProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const DEFAULT_LABEL = 'Boutique vérifiée';
+/**
+ * States exactly what was checked: control of the shop's domain. Never
+ * "boutique sûre", "100 % fiable" or "entreprise vérifiée".
+ */
+const DEFAULT_LABEL = 'Domaine vérifié';
 
 /**
  * A deliberately subtle trust indicator. Verification is earned server-side

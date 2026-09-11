@@ -104,13 +104,14 @@ export default function ShopDetailScreen() {
               <Text variant="title" style={styles.name}>
                 {shop.name}
               </Text>
-              {shop.verified ? <VerifiedMark /> : null}
             </View>
             {metaLine.length > 0 ? (
               <Text variant="body" tone="secondary">
                 {metaLine}
               </Text>
             ) : null}
+            {/* Approved, unexpired, server-issued domain control — and nothing more. */}
+            {shop.domainVerified ? <VerifiedMark variant="badge" style={styles.badge} /> : null}
           </View>
 
           {shop.shortDescription ? (
@@ -166,6 +167,15 @@ export default function ShopDetailScreen() {
             </ScrollView>
           </View>
         ) : null}
+
+        <View style={styles.footer}>
+          <Button
+            variant="text"
+            label="Signaler cette boutique"
+            iconLeft="flag"
+            onPress={() => router.push({ pathname: '/report/[shopId]', params: { shopId: shop.id } })}
+          />
+        </View>
       </ScrollView>
 
       <View
@@ -234,6 +244,13 @@ const styles = StyleSheet.create({
   },
   name: {
     flexShrink: 1,
+  },
+  badge: {
+    marginTop: spacing.xs,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: layout.sectionGap,
   },
   tags: {
     flexDirection: 'row',

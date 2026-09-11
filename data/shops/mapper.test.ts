@@ -49,6 +49,7 @@ describe('toShop', () => {
     assert.equal(shop.city, 'Roubaix');
     assert.equal(shop.priceLevel, 2);
     assert.equal(shop.verified, true);
+    assert.equal(shop.domainVerified, true);
     assert.equal(shop.images.cover, 'https://img.example/cover.jpg');
   });
 
@@ -261,6 +262,21 @@ describe('verification', () => {
       row({ shop_verifications: [{ verification_type: 'business', verified_at: '2026-01-01T00:00:00Z' }] })
     );
     assert.equal(shop.verified, true);
+    // Only domain control earns the public "Domaine vérifié" badge.
+    assert.equal(shop.domainVerified, false);
+  });
+
+  it('names domain control only when a domain record is visible', () => {
+    assert.equal(toShop(row({ shop_verifications: null })).domainVerified, false);
+    const shop = toShop(
+      row({
+        shop_verifications: [
+          { verification_type: 'business', verified_at: '2026-01-01T00:00:00Z' },
+          { verification_type: 'domain', verified_at: '2026-01-02T00:00:00Z' },
+        ],
+      })
+    );
+    assert.equal(shop.domainVerified, true);
   });
 });
 
@@ -287,6 +303,7 @@ describe('the client model exposes nothing internal', () => {
         'categories',
         'city',
         'countryCode',
+        'domainVerified',
         'id',
         'images',
         'name',
@@ -325,6 +342,7 @@ describe('buildHomeSections', () => {
       tags: [],
       images: { cover: null, gallery: [] },
       verified,
+      domainVerified: verified,
       publishedAt: '2026-09-01T00:00:00Z',
     };
   }

@@ -33,10 +33,13 @@ const bodies = FUNCTIONS.map(body).join(' ');
 const outside = FUNCTIONS.reduce((rest, name) => rest.replace(body(name), ' '), sql);
 
 describe('shop analyzer migration — placement', () => {
-  it('sorts after every applied migration', () => {
+  it('sorts after every migration applied before it', () => {
     const files = readdirSync(MIGRATIONS).filter((file) => file.endsWith('.sql')).sort();
-    assert.equal(files[files.length - 1], FILE);
-    assert.ok(files.includes('20260910120000_merchant_foundation.sql'));
+    const foundation = '20260910120000_merchant_foundation.sql';
+    assert.ok(files.includes(FILE));
+    assert.ok(files.includes(foundation));
+    // Later migrations (Prompt 17 onwards) sort after it; nothing is inserted before.
+    assert.ok(files.indexOf(FILE) === files.indexOf(foundation) + 1);
   });
 
   it('carries no explicit transaction', () => {

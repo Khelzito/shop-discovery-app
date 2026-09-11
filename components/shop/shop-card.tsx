@@ -68,7 +68,7 @@ export function ShopCard({
           <Text variant={isCompact ? 'bodyStrong' : 'shopName'} numberOfLines={1} style={styles.name}>
             {shop.name}
           </Text>
-          {shop.verified ? <VerifiedMark /> : null}
+          {shop.domainVerified ? <VerifiedMark /> : null}
         </View>
         {category ? (
           <Text variant={isCompact ? 'caption' : 'meta'} tone="secondary" numberOfLines={1}>

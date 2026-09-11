@@ -77,6 +77,8 @@ export function toShop(row: ShopRow): Shop {
     // its mere presence is the answer. Nothing is recomputed here, and no
     // editable column is consulted.
     verified: (row.shop_verifications ?? []).length > 0,
+    // The one verification the public badge names: control of the domain.
+    domainVerified: (row.shop_verifications ?? []).some((verification) => verification.verification_type === 'domain'),
     publishedAt: row.published_at,
   };
 }

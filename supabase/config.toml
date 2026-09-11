@@ -433,3 +433,10 @@ enabled = true
 # reach a user-supplied website (through the pinned safe-fetch, never fetch())
 # and holds a service_role client restricted to three SECURITY DEFINER RPCs.
 verify_jwt = true
+
+[functions.verify-shop-claim]
+enabled = true
+# Authenticated only, before the handler runs. Reads a claimed shop's home page
+# through the pinned safe-fetch and holds a service_role client restricted to
+# begin/finish_claim_verification, which alone can approve a claim.
+verify_jwt = true
