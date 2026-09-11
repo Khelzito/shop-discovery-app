@@ -39,6 +39,7 @@
     "scripts/postgrest.ts",
     "scripts/postgrest.test.ts",
     "scripts/backfill-plan.ts",
-    "scripts/backfill-plan.test.ts"
+    "scripts/backfill-plan.test.ts",
+    "supabase/migration-contracts.test.ts"
   ]
 }

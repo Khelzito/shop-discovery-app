@@ -426,3 +426,10 @@ enabled = true
 # holds a service_role client for the vector query. An unauthenticated caller
 # must never reach a handler that can read shop_embeddings, even indirectly.
 verify_jwt = true
+
+[functions.ai-shop-analysis]
+enabled = true
+# Authenticated only, before the handler runs. This function makes the server
+# reach a user-supplied website (through the pinned safe-fetch, never fetch())
+# and holds a service_role client restricted to three SECURITY DEFINER RPCs.
+verify_jwt = true

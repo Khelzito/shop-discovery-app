@@ -18,3 +18,4 @@ export * from './model.ts';
 export * from './rerank.ts';
 export * from './search-intent.ts';
 export * from './shop-analysis.ts';
+export * from './shop-analysis-v2.ts';

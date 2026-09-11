@@ -5,6 +5,7 @@ import type { AiResult } from '../contracts/model.ts';
 import type { RerankCandidate, RerankResult } from '../contracts/rerank.ts';
 import type { SearchIntent } from '../contracts/search-intent.ts';
 import type { ShopAnalysis } from '../contracts/shop-analysis.ts';
+import type { ShopInferred, ShopObserved } from '../contracts/shop-analysis-v2.ts';
 
 /**
  * Provider interfaces.
@@ -59,6 +60,42 @@ export interface ShopAnalysisProvider extends AiProvider {
     input: { sourceUrl: string; extractedText: string; imageUrls?: string[] },
     options?: AiRequestOptions
   ): Promise<AiResult<ShopAnalysis>>;
+}
+
+/** A category or tag the model may choose from: the live vocabulary, never a guess. */
+export type TaxonomyEntry = { slug: string; name: string };
+
+/**
+ * What a shop-analysis/2 model sees.
+ *
+ * Observed facts and a bounded, cleaned excerpt — never HTML, never a header,
+ * never an address, never a secret or a database row. The page text is DATA
+ * from a third party and is presented to the model as such.
+ */
+export type ShopAnalysisModelInput = {
+  target: { domain: string; finalUrl: string };
+  observed: ShopObserved;
+  title: string | null;
+  headings: readonly string[];
+  pageText: string;
+  categories: readonly TaxonomyEntry[];
+  tags: readonly TaxonomyEntry[];
+  locale: 'fr';
+};
+
+/**
+ * shop-analysis/2: proposes the INFERRED half of an analysis.
+ *
+ * The observed half is extracted deterministically before this is called, and
+ * the caller re-validates whatever comes back against the full contract, the
+ * live taxonomy, and the trust and origin rules. An adapter can therefore be
+ * wrong without that error reaching a merchant.
+ */
+export interface ShopAnalysisV2Provider extends AiProvider {
+  inferShopProfile(
+    input: ShopAnalysisModelInput,
+    options?: AiRequestOptions
+  ): Promise<AiResult<ShopInferred>>;
 }
 
 /**
