@@ -100,3 +100,30 @@ penalties and category diversity so popularity does not become the only path
 to visibility. AI remains responsible for understanding natural-language
 search; the database remains responsible for recommendation eligibility and
 ordering.
+
+## Prompt 19 — grounded in-app assistant
+
+Prompt 19 intentionally adds a **scoped assistant surface without adding a fifth
+primary tab**. It is reachable from Explore/Profile and reuses the existing
+search stack rather than creating a second discovery engine.
+
+Flow:
+
+`message -> existing hybrid search -> candidate shop ids -> ai-assistant -> RLS re-read -> grounded reply`
+
+The mobile app may propose at most eight candidate shop ids. `ai-assistant`
+re-reads those ids under the caller's own JWT before the model sees any shop
+facts. Model output is then validated so `recommendedShopIds` can only be a
+subset of those server-verified ids. A model therefore cannot invent a shop or
+surface an unpublished one.
+
+Questions about Shop Discovery use published `help_articles`. Retrieval is a
+small deterministic lexical pass for V1; the already-existing
+`help_article_embeddings` table remains untouched until the help corpus is
+large enough to justify vector retrieval. A help answer must cite a retrieved
+article id. With no provider, timeout, or invalid model output, the endpoint
+returns a deterministic grounded fallback instead of hallucinating.
+
+Conversation history is ephemeral and bounded to six turns. No conversation is
+persisted in V1, no web browsing/tools are exposed to the model, and no trust or
+verification decision is delegated to AI.

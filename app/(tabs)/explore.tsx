@@ -5,7 +5,7 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { CategoryFilter } from '@/components/shop/category-filter';
 import { InspirationRail } from '@/components/shop/inspiration-rail';
 import { ShopRow } from '@/components/shop/shop-row';
-import { EmptyState, Screen, SearchField, Section, Skeleton, Text } from '@/components/ui';
+import { Button, EmptyState, Screen, SearchField, Section, Skeleton, Text } from '@/components/ui';
 import { INSPIRATIONS } from '@/data/inspirations';
 import { searchShopsByIntent } from '@/data/search';
 import { getCategories, getPublishedShops } from '@/data/shops';
@@ -175,6 +175,13 @@ export default function ExploreScreen() {
           onSubmitEditing={() => {
             void submitSearch();
           }}
+        />
+        <Button
+          label="Demander à l’assistant"
+          iconLeft="sparkle"
+          variant="secondary"
+          fullWidth
+          onPress={() => router.push('/assistant' as never)}
         />
         <CategoryFilter
           categories={categories.data ?? []}

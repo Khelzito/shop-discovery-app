@@ -230,3 +230,11 @@ Clients then re-read those shop ids through the normal published-shop RLS.
 Favorites and explicit preferences are persisted under the existing own-row
 RLS policies. Search interactions are also restricted so a user can only bind
 an interaction to one of their own search rows.
+
+### Prompt 19 — assistant data boundaries
+
+Prompt 19 adds no new database table. Assistant conversations are ephemeral.
+The server reads only published shops already visible under the caller's RLS and
+published `help_articles`; the Expo client never receives vectors or privileged
+verification evidence. Search interactions produced by assistant discovery
+reuse the existing search analytics path.

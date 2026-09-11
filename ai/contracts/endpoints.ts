@@ -1,3 +1,4 @@
+import type { AssistantRequest, AssistantResponse } from './assistant.ts';
 import type { CountryCode, LanguageCode } from './common.ts';
 import type { AiErrorPayload } from './errors.ts';
 import type { HelpAnswer, HelpQuery } from './help.ts';
@@ -28,6 +29,7 @@ export const AI_ENDPOINTS = {
   shopAnalysis: '/ai/shop-analysis',
   help: '/ai/help',
   search: '/ai/search',
+  assistant: '/ai/assistant',
 } as const;
 
 /** POST /ai/search-intent */
@@ -136,6 +138,10 @@ export type ShopAnalysisResponse = {
   /** The row id written to `shop_ai_analyses`. */
   analysisId: string;
 };
+
+/** POST /ai/assistant */
+export type AssistantEndpointRequest = AssistantRequest;
+export type AssistantEndpointResponse = AssistantResponse;
 
 /** POST /ai/help */
 export type HelpRequest = HelpQuery;

@@ -440,3 +440,9 @@ enabled = true
 # through the pinned safe-fetch and holds a service_role client restricted to
 # begin/finish_claim_verification, which alone can approve a claim.
 verify_jwt = true
+
+[functions.ai-assistant]
+enabled = true
+# Assistant prompts can spend provider quota and may read the caller's visible
+# candidate shops, so platform JWT verification is mandatory before the handler.
+verify_jwt = true

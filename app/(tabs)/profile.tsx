@@ -61,6 +61,7 @@ export default function ProfileScreen() {
                   label: 'Préférences',
                   onPress: () => router.push('/preferences'),
                 },
+                { icon: 'sparkle', label: 'Assistant IA', onPress: () => router.push('/assistant' as never) },
                 { icon: 'help', label: 'Aide', onPress: () => router.push('/help') },
               ]}
             />

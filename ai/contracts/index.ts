@@ -21,3 +21,5 @@ export * from './shop-analysis.ts';
 export * from './shop-analysis-v2.ts';
 export * from './shop-analysis-endpoint.ts';
 export * from './merchant-trust.ts';
+
+export * from './assistant.ts';

@@ -56,7 +56,8 @@ This is not Amazon, Google Shopping, or a traditional directory. It is a **shop 
 - Complex advertising/boost system.
 - Promotions in first development pass.
 - Dark mode.
-- Generative chatbot screen.
+- Unbounded/general-purpose chatbot or web-wide shopping agent.
+- A scoped, catalogue-grounded assistant is allowed as a secondary surface (never a fifth primary tab).
 
 ## 4. Navigation
 Exactly four primary bottom tabs:
