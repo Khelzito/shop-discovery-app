@@ -40,6 +40,7 @@
     "scripts/postgrest.test.ts",
     "scripts/backfill-plan.ts",
     "scripts/backfill-plan.test.ts",
+    "lib/merchant/**/*.ts",
     "supabase/migration-contracts.test.ts"
   ]
 }

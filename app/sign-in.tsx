@@ -1,8 +1,9 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { Button, IconButton, Screen, Text, TextField } from '@/components/ui';
+import { merchantRedirectTarget } from '@/lib/merchant/routes';
 import { useAuth } from '@/state/auth';
 import { layout, spacing } from '@/theme';
 
@@ -10,6 +11,7 @@ import { layout, spacing } from '@/theme';
  * Connexion — email and password only for V1.
  */
 export default function SignInScreen() {
+  const params = useLocalSearchParams<{ redirect?: string }>();
   const { signIn, isConfigured } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +33,13 @@ export default function SignInScreen() {
     }
 
     setSubmitting(false);
+    // "Référencer ma boutique" signs in first, then continues the merchant
+    // flow. Any other value of the parameter is ignored.
+    const target = merchantRedirectTarget(params.redirect);
+    if (target) {
+      router.replace(target);
+      return;
+    }
     router.back();
   };
 

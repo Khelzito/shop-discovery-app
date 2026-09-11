@@ -94,7 +94,12 @@ export default function ProfileScreen() {
         <Text variant="meta" tone="secondary">
           Vous avez une boutique ?
         </Text>
-        <Button variant="text" label="Référencer ma boutique" iconRight="chevronRight" />
+        <Button
+          variant="text"
+          label="Référencer ma boutique"
+          iconRight="chevronRight"
+          onPress={() => router.push('/merchant')}
+        />
       </View>
     </Screen>
   );

@@ -1,3 +1,5 @@
+import { MERCHANT_PROPOSAL_KEY } from '../contracts/shop-analysis-endpoint.ts';
+import type { MerchantProposal } from '../contracts/shop-analysis-endpoint.ts';
 import { SHOP_ANALYSIS_V2_CONTRACT } from '../contracts/shop-analysis-v2.ts';
 import type { AnalysisWarning, ShopAnalysisV2 } from '../contracts/shop-analysis-v2.ts';
 import { meanConfidence } from './shop-analyzer.ts';
@@ -28,7 +30,7 @@ import type { ExtractionSummary } from './shop-analyzer.ts';
  *                                     edits — are left untouched.
  */
 
-export const MERCHANT_PROPOSAL_KEY = 'aiProposal';
+export { MERCHANT_PROPOSAL_KEY };
 
 /**
  * Key names that must never reach a persisted document. Mirrors the SQL guard
@@ -41,17 +43,8 @@ export function hasForbiddenPersistedKey(value: unknown): boolean {
   return FORBIDDEN_PERSISTED_KEY.test(JSON.stringify(value));
 }
 
-export type MerchantProposal = {
-  proposalVersion: typeof SHOP_ANALYSIS_V2_CONTRACT;
-  analyzedAt: string;
-  websiteUrl: string;
-  domain: string;
-  observed: ShopAnalysisV2['observed'];
-  inferred: ShopAnalysisV2['inferred'];
-  warnings: ShopAnalysisV2['warnings'];
-  unsupported: ShopAnalysisV2['unsupported'];
-  degraded: boolean;
-};
+/** Defined in ai/contracts so the app reads exactly what the server writes. */
+export type { MerchantProposal };
 
 export function buildMerchantProposal(analysis: ShopAnalysisV2, analyzedAt: string): MerchantProposal {
   return {

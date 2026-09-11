@@ -45,6 +45,7 @@ export default function RootLayout() {
               <Stack.Screen name="preferences" options={{ headerShown: false }} />
               <Stack.Screen name="help/index" options={{ headerShown: false }} />
               <Stack.Screen name="help/[topic]" options={{ headerShown: false }} />
+              <Stack.Screen name="merchant" options={{ headerShown: false }} />
             </Stack>
           </FavoritesProvider>
         </PreferencesProvider>

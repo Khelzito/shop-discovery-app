@@ -1,6 +1,6 @@
 import type { AiErrorCode } from '../contracts/errors.ts';
 import { isRetryableAiErrorCode } from '../contracts/errors.ts';
-import type { ShopAnalysisResponseV2 } from '../contracts/shop-analysis-v2.ts';
+import type { ShopAnalysisEndpointData } from '../contracts/shop-analysis-endpoint.ts';
 import { validateShopAnalysisRequestV2 } from './shop-analysis-v2.ts';
 import { toCompleteShopAnalysisParams, toFailShopAnalysisParams } from './shop-analysis-persistence.ts';
 import type { BeginOutcome, FailShopAnalysisParams, ShopAnalysisStore } from './shop-analysis-persistence.ts';
@@ -53,14 +53,8 @@ export type ShopAnalysisHandlerDeps = {
   log?: HandlerLog;
 };
 
-/** Wire data for a success. Extends the Phase A response without changing it. */
-export type ShopAnalysisEndpointData =
-  | (ShopAnalysisResponseV2 & {
-      outcome: 'analyzed' | 'blocked';
-      submissionId: string;
-      proposalSaved: boolean;
-    })
-  | { outcome: 'shop_exists'; existingShopId: string };
+/** Wire data for a success. Defined in ai/contracts so the app reads the same shape. */
+export type { ShopAnalysisEndpointData };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
